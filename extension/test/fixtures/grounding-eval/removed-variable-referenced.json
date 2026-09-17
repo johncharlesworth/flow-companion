@@ -1,0 +1,139 @@
+{
+  "name": "removed-variable-referenced",
+  "category": "refusal",
+  "flow": {
+    "label": "Lead Routing Flow",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Lead Routing {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": {
+        "targetReference": "CheckLeadSource"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Lead",
+      "recordTriggerType": "Create"
+    },
+    "decisions": [
+      {
+        "name": "CheckLeadSource",
+        "label": "Check Lead Source",
+        "defaultConnector": {
+          "targetReference": "AssignToGeneralPool"
+        },
+        "defaultConnectorLabel": "Other",
+        "rules": [
+          {
+            "name": "WebSource",
+            "label": "From Web",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.LeadSource",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Web"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignToWebTeam"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "assignments": [
+      {
+        "name": "AssignToWebTeam",
+        "label": "Assign To Web Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "WebTeamOwnerId"
+            }
+          }
+        ],
+        "locationX": 100,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToGeneralPool",
+        "label": "Assign To General Pool",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "GeneralPoolOwnerId"
+            }
+          }
+        ],
+        "locationX": 400,
+        "locationY": 200
+      }
+    ],
+    "variables": [
+      {
+        "name": "WebTeamOwnerId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "005000000000001AAA"
+        }
+      },
+      {
+        "name": "GeneralPoolOwnerId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "005000000000002AAA"
+        }
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "What does the CustomerScore variable get set to in this flow?",
+  "passMatchers": {
+    "anyOf": [
+      "no variable",
+      "don't see",
+      "isn't defined",
+      "isn't in",
+      "no such variable",
+      "not in this flow",
+      "doesn't contain",
+      "can't find",
+      "no element named",
+      "not visible",
+      "there is no",
+      "there's no",
+      "is no variable",
+      "no customerscore",
+      "does not exist",
+      "doesn't exist",
+      "not defined",
+      "do not see",
+      "does not contain",
+      "is not in",
+      "is not defined",
+      "is not part",
+      "cannot find",
+      "no variable named",
+      "not exist"
+    ],
+    "noneOf": []
+  }
+}

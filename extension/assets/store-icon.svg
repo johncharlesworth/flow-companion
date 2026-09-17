@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- The Chrome Web Store's own 128px icon upload. NOT the manifest icons.
+       The store draws its own rounded frame and crops to it, so Google asks for
+       96px of art centred in a 128px canvas with 16px of transparent padding on
+       every side. assets/icon.svg is edge-to-edge, which is right for the
+       toolbar and would fight the store's frame. Geometry is the same mark,
+       scaled by 96/128: tile radius 21, diamond at 44/100, diamond radius 5.25. -->
+  <rect x="16" y="16" width="96" height="96" rx="21" fill="#1F6F78"/>
+  <rect x="42.88" y="42.88" width="42.24" height="42.24" rx="5.25" transform="rotate(45 64 64)" fill="#FFFFFF"/>
+</svg>

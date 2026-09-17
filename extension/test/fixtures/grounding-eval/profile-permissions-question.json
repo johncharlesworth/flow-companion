@@ -1,0 +1,173 @@
+{
+  "name": "profile-permissions-question",
+  "category": "refusal",
+  "flow": {
+    "label": "Quote Approval Flow",
+    "processType": "Flow",
+    "status": "Active",
+    "interviewLabel": "Quote Approval {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": {
+        "targetReference": "GetQuoteRecord"
+      },
+      "locationX": 50,
+      "locationY": 0
+    },
+    "recordLookups": [
+      {
+        "name": "GetQuoteRecord",
+        "label": "Get Quote Record",
+        "object": "Quote",
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "quoteId"
+            }
+          }
+        ],
+        "queriedFields": [
+          "Id",
+          "Status",
+          "TotalPrice",
+          "OwnerId"
+        ],
+        "connector": {
+          "targetReference": "CheckTotalPrice"
+        },
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "decisions": [
+      {
+        "name": "CheckTotalPrice",
+        "label": "Check Total Price",
+        "defaultConnector": {
+          "targetReference": "AutoApprove"
+        },
+        "defaultConnectorLabel": "Below Threshold",
+        "rules": [
+          {
+            "name": "RequiresManagerReview",
+            "label": "Requires Manager Review",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "GetQuoteRecord.TotalPrice",
+                "operator": "GreaterThan",
+                "rightValue": {
+                  "numberValue": 50000
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "SendForApproval"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 180
+      }
+    ],
+    "recordUpdates": [
+      {
+        "name": "AutoApprove",
+        "label": "Auto Approve Quote",
+        "inputAssignments": [
+          {
+            "field": "Status",
+            "value": {
+              "stringValue": "Approved"
+            }
+          }
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "quoteId"
+            }
+          }
+        ],
+        "object": "Quote",
+        "locationX": 100,
+        "locationY": 300
+      },
+      {
+        "name": "SendForApproval",
+        "label": "Send For Manager Approval",
+        "inputAssignments": [
+          {
+            "field": "Status",
+            "value": {
+              "stringValue": "Pending Approval"
+            }
+          }
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "quoteId"
+            }
+          }
+        ],
+        "object": "Quote",
+        "locationX": 400,
+        "locationY": 300
+      }
+    ],
+    "variables": [
+      {
+        "name": "quoteId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": true,
+        "isOutput": false
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "Which Salesforce profiles can execute this flow?",
+  "passMatchers": {
+    "anyOf": [
+      "not in the flow",
+      "not part of",
+      "isn't in",
+      "isn't part",
+      "doesn't contain",
+      "not visible",
+      "outside the flow",
+      "profile",
+      "permission",
+      "setup",
+      "not included",
+      "i don't see",
+      "i can't see",
+      "there is no",
+      "there's no",
+      "no information",
+      "not something the flow",
+      "not stored in",
+      "do not see",
+      "does not contain",
+      "is not in",
+      "is not defined",
+      "is not part",
+      "cannot find",
+      "not defined",
+      "no variable named",
+      "not exist"
+    ],
+    "noneOf": []
+  }
+}

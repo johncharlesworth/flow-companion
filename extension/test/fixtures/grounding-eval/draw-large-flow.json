@@ -1,0 +1,1914 @@
+{
+  "name": "draw-large-flow",
+  "category": "draw",
+  "note": "Draw this flow, business variant, on an 80-element synthetic order-fulfilment flow. The contract asks for 8 to 15 nodes; the eval allows 6 to 18, because the count is a contract property, not a grounding one. Every API-looking name in the picture must exist in the flow.",
+  "flow": {
+    "label": "Order Fulfilment Orchestration",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Order Fulfilment {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "SystemModeWithoutSharing",
+    "description": "Routes a saved order through validation, pricing, inventory, shipping, and notifications.",
+    "start": {
+      "connector": {
+        "targetReference": "Get_Account"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Order",
+      "recordTriggerType": "CreateAndUpdate"
+    },
+    "recordLookups": [
+      {
+        "name": "Get_Account",
+        "label": "Load the order's account",
+        "object": "Account",
+        "getFirstRecordOnly": true,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Name",
+          "Industry",
+          "Tier__c"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.AccountId"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Get_Contact"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 100,
+        "locationY": 80
+      },
+      {
+        "name": "Get_Contact",
+        "label": "Load the primary contact",
+        "object": "Contact",
+        "getFirstRecordOnly": true,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Email",
+          "Phone"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Get_Order_Items"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 250,
+        "locationY": 80
+      },
+      {
+        "name": "Get_Order_Items",
+        "label": "Load the line items",
+        "object": "OrderItem",
+        "getFirstRecordOnly": false,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Quantity",
+          "UnitPrice",
+          "Product2Id"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Get_Pricebook"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 400,
+        "locationY": 80
+      },
+      {
+        "name": "Get_Pricebook",
+        "label": "Load the price book",
+        "object": "Pricebook2",
+        "getFirstRecordOnly": true,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Name"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Get_Warehouse"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 550,
+        "locationY": 80
+      },
+      {
+        "name": "Get_Warehouse",
+        "label": "Find the nearest warehouse",
+        "object": "Warehouse__c",
+        "getFirstRecordOnly": true,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Region__c",
+          "Stock_Level__c"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Get_Shipping_Rate"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 700,
+        "locationY": 80
+      },
+      {
+        "name": "Get_Shipping_Rate",
+        "label": "Look up the shipping rate",
+        "object": "Shipping_Rate__c",
+        "getFirstRecordOnly": true,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Rate__c",
+          "Carrier__c"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Get_Tax_Rule"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 850,
+        "locationY": 80
+      },
+      {
+        "name": "Get_Tax_Rule",
+        "label": "Look up the tax rule",
+        "object": "Tax_Rule__c",
+        "getFirstRecordOnly": true,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Rate__c"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Get_Open_Cases"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 100,
+        "locationY": 190
+      },
+      {
+        "name": "Get_Open_Cases",
+        "label": "Check for open cases on the account",
+        "object": "Case",
+        "getFirstRecordOnly": true,
+        "storeOutputAutomatically": true,
+        "queriedFields": [
+          "Id",
+          "Status"
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Order_Status"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Lookup"
+        },
+        "locationX": 250,
+        "locationY": 190
+      }
+    ],
+    "decisions": [
+      {
+        "name": "Check_Order_Status",
+        "label": "Is the order activated?",
+        "defaultConnector": {
+          "targetReference": "Set_Order_Not_Ready"
+        },
+        "defaultConnectorLabel": "Order Not Ready",
+        "rules": [
+          {
+            "name": "Activated",
+            "label": "Status equals Activated",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Status",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Activated"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Activated"
+            }
+          }
+        ],
+        "locationX": 850,
+        "locationY": 190
+      },
+      {
+        "name": "Check_Order_Type",
+        "label": "Which kind of order?",
+        "defaultConnector": {
+          "targetReference": "Set_Unknown_Type"
+        },
+        "defaultConnectorLabel": "Unknown Type",
+        "rules": [
+          {
+            "name": "Rush",
+            "label": "Rush order",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Is_Rush_Order",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "booleanValue": true
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Rush"
+            }
+          },
+          {
+            "name": "Standard",
+            "label": "Standard order",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Standard"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Standard"
+            }
+          }
+        ],
+        "locationX": 850,
+        "locationY": 300
+      },
+      {
+        "name": "Check_Account_Tier",
+        "label": "Which account tier?",
+        "defaultConnector": {
+          "targetReference": "Set_Small_Business"
+        },
+        "defaultConnectorLabel": "Small Business",
+        "rules": [
+          {
+            "name": "Enterprise",
+            "label": "Enterprise tier",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Account.Tier__c",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Enterprise"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Enterprise"
+            }
+          },
+          {
+            "name": "Mid_Market",
+            "label": "Mid-market tier",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Account.Tier__c",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Mid-Market"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Mid_Market"
+            }
+          }
+        ],
+        "locationX": 850,
+        "locationY": 410
+      },
+      {
+        "name": "Check_Credit_Hold",
+        "label": "Is the account on credit hold?",
+        "defaultConnector": {
+          "targetReference": "Set_Not_On_Hold"
+        },
+        "defaultConnectorLabel": "Not On Hold",
+        "rules": [
+          {
+            "name": "On_Hold",
+            "label": "Credit hold flag set",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Account.Credit_Hold__c",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "booleanValue": true
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_On_Hold"
+            }
+          }
+        ],
+        "locationX": 550,
+        "locationY": 520
+      },
+      {
+        "name": "Check_Stock",
+        "label": "Is everything in stock?",
+        "defaultConnector": {
+          "targetReference": "Set_Backorder"
+        },
+        "defaultConnectorLabel": "Backorder",
+        "rules": [
+          {
+            "name": "In_Stock",
+            "label": "Stock covers the order",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Warehouse.Stock_Level__c",
+                "operator": "GreaterThanOrEqualTo",
+                "rightValue": {
+                  "elementReference": "$Record.Total_Quantity__c"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_In_Stock"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 630
+      },
+      {
+        "name": "Check_Region",
+        "label": "Which shipping region?",
+        "defaultConnector": {
+          "targetReference": "Set_Region_Unknown"
+        },
+        "defaultConnectorLabel": "Region Unknown",
+        "rules": [
+          {
+            "name": "Domestic",
+            "label": "Domestic shipping",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "ShippingRegion",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Domestic"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Domestic"
+            }
+          },
+          {
+            "name": "International",
+            "label": "International shipping",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "ShippingRegion",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "International"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_International"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 740
+      },
+      {
+        "name": "Check_Discount",
+        "label": "Does a discount apply?",
+        "defaultConnector": {
+          "targetReference": "Set_No_Discount"
+        },
+        "defaultConnectorLabel": "No Discount",
+        "rules": [
+          {
+            "name": "Volume_Discount",
+            "label": "Ten or more items",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Total_Quantity__c",
+                "operator": "GreaterThanOrEqualTo",
+                "rightValue": {
+                  "numberValue": 10
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Volume_Discount"
+            }
+          },
+          {
+            "name": "Loyalty_Discount",
+            "label": "Loyal customer",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Account.Loyalty_Points__c",
+                "operator": "GreaterThan",
+                "rightValue": {
+                  "numberValue": 1000
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Loyalty_Discount"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 850
+      },
+      {
+        "name": "Check_Tax",
+        "label": "Is the order taxable?",
+        "defaultConnector": {
+          "targetReference": "Set_Tax_Exempt"
+        },
+        "defaultConnectorLabel": "Tax Exempt",
+        "rules": [
+          {
+            "name": "Taxable",
+            "label": "Taxable region",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Tax_Rule.Rate__c",
+                "operator": "GreaterThan",
+                "rightValue": {
+                  "numberValue": 0
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Taxable"
+            }
+          }
+        ],
+        "locationX": 850,
+        "locationY": 850
+      },
+      {
+        "name": "Check_Open_Cases",
+        "label": "Are there open cases?",
+        "defaultConnector": {
+          "targetReference": "Set_No_Open_Cases"
+        },
+        "defaultConnectorLabel": "No Open Cases",
+        "rules": [
+          {
+            "name": "Has_Open_Cases",
+            "label": "Open cases found",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Open_Cases",
+                "operator": "IsNull",
+                "rightValue": {
+                  "booleanValue": false
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Has_Open_Cases"
+            }
+          }
+        ],
+        "locationX": 550,
+        "locationY": 960
+      },
+      {
+        "name": "Check_Delivery_Window",
+        "label": "Is delivery overdue?",
+        "defaultConnector": {
+          "targetReference": "Set_On_Time"
+        },
+        "defaultConnectorLabel": "On Time",
+        "rules": [
+          {
+            "name": "Overdue",
+            "label": "More than 7 days",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Days_Since_Order",
+                "operator": "GreaterThan",
+                "rightValue": {
+                  "numberValue": 7
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Overdue"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 1070
+      },
+      {
+        "name": "Check_Carrier",
+        "label": "Which carrier?",
+        "defaultConnector": {
+          "targetReference": "Set_Carrier_Unknown"
+        },
+        "defaultConnectorLabel": "Carrier Unknown",
+        "rules": [
+          {
+            "name": "Express_Carrier",
+            "label": "Express carrier chosen",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Shipping_Rate.Carrier__c",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Express"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Express_Carrier"
+            }
+          },
+          {
+            "name": "Ground_Carrier",
+            "label": "Ground carrier chosen",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Shipping_Rate.Carrier__c",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Ground"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Ground_Carrier"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 1180
+      },
+      {
+        "name": "Check_Notification",
+        "label": "Who should be notified?",
+        "defaultConnector": {
+          "targetReference": "Set_Notify_Owner_Only"
+        },
+        "defaultConnectorLabel": "Notify Owner Only",
+        "rules": [
+          {
+            "name": "Notify_Contact",
+            "label": "Contact has an email",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Get_Contact.Email",
+                "operator": "IsNull",
+                "rightValue": {
+                  "booleanValue": false
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Set_Notify_Contact"
+            }
+          }
+        ],
+        "locationX": 850,
+        "locationY": 1180
+      }
+    ],
+    "assignments": [
+      {
+        "name": "Set_Activated",
+        "label": "Set values for status equals activated",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Activated"
+        },
+        "locationX": 400,
+        "locationY": 190
+      },
+      {
+        "name": "Set_Order_Not_Ready",
+        "label": "Set values for order not ready",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Order_Type"
+        },
+        "locationX": 700,
+        "locationY": 190
+      },
+      {
+        "name": "Set_Rush",
+        "label": "Set values for rush order",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Rush"
+        },
+        "locationX": 100,
+        "locationY": 300
+      },
+      {
+        "name": "Set_Standard",
+        "label": "Set values for standard order",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Standard"
+        },
+        "locationX": 400,
+        "locationY": 300
+      },
+      {
+        "name": "Set_Unknown_Type",
+        "label": "Set values for unknown type",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Account_Tier"
+        },
+        "locationX": 700,
+        "locationY": 300
+      },
+      {
+        "name": "Set_Enterprise",
+        "label": "Set values for enterprise tier",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Enterprise"
+        },
+        "locationX": 100,
+        "locationY": 410
+      },
+      {
+        "name": "Set_Mid_Market",
+        "label": "Set values for mid-market tier",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Mid_Market"
+        },
+        "locationX": 400,
+        "locationY": 410
+      },
+      {
+        "name": "Set_Small_Business",
+        "label": "Set values for small business",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Credit_Hold"
+        },
+        "locationX": 700,
+        "locationY": 410
+      },
+      {
+        "name": "Set_On_Hold",
+        "label": "Set values for credit hold flag set",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_On_Hold"
+        },
+        "locationX": 100,
+        "locationY": 520
+      },
+      {
+        "name": "Set_Not_On_Hold",
+        "label": "Set values for not on hold",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Stock"
+        },
+        "locationX": 400,
+        "locationY": 520
+      },
+      {
+        "name": "Set_In_Stock",
+        "label": "Set values for stock covers the order",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_In_Stock"
+        },
+        "locationX": 700,
+        "locationY": 520
+      },
+      {
+        "name": "Set_Backorder",
+        "label": "Set values for backorder",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Region"
+        },
+        "locationX": 100,
+        "locationY": 630
+      },
+      {
+        "name": "Set_Domestic",
+        "label": "Set values for domestic shipping",
+        "assignmentItems": [
+          {
+            "assignToReference": "ShippingRegion",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Domestic"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Domestic"
+        },
+        "locationX": 400,
+        "locationY": 630
+      },
+      {
+        "name": "Set_International",
+        "label": "Set values for international shipping",
+        "assignmentItems": [
+          {
+            "assignToReference": "ShippingRegion",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "International"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_International"
+        },
+        "locationX": 700,
+        "locationY": 630
+      },
+      {
+        "name": "Set_Region_Unknown",
+        "label": "Set values for region unknown",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Discount"
+        },
+        "locationX": 100,
+        "locationY": 740
+      },
+      {
+        "name": "Set_Volume_Discount",
+        "label": "Set values for ten or more items",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Volume_Discount"
+        },
+        "locationX": 400,
+        "locationY": 740
+      },
+      {
+        "name": "Set_Loyalty_Discount",
+        "label": "Set values for loyal customer",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Loyalty_Discount"
+        },
+        "locationX": 700,
+        "locationY": 740
+      },
+      {
+        "name": "Set_No_Discount",
+        "label": "Set values for no discount",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Tax"
+        },
+        "locationX": 100,
+        "locationY": 850
+      },
+      {
+        "name": "Set_Taxable",
+        "label": "Set values for taxable region",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Taxable"
+        },
+        "locationX": 400,
+        "locationY": 850
+      },
+      {
+        "name": "Set_Tax_Exempt",
+        "label": "Set values for tax exempt",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Open_Cases"
+        },
+        "locationX": 700,
+        "locationY": 850
+      },
+      {
+        "name": "Set_Has_Open_Cases",
+        "label": "Set values for open cases found",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Has_Open_Cases"
+        },
+        "locationX": 100,
+        "locationY": 960
+      },
+      {
+        "name": "Set_No_Open_Cases",
+        "label": "Set values for no open cases",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Delivery_Window"
+        },
+        "locationX": 400,
+        "locationY": 960
+      },
+      {
+        "name": "Set_Overdue",
+        "label": "Set values for more than 7 days",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Overdue"
+        },
+        "locationX": 700,
+        "locationY": 960
+      },
+      {
+        "name": "Set_On_Time",
+        "label": "Set values for on time",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Carrier"
+        },
+        "locationX": 100,
+        "locationY": 1070
+      },
+      {
+        "name": "Set_Express_Carrier",
+        "label": "Set values for express carrier chosen",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Express_Carrier"
+        },
+        "locationX": 400,
+        "locationY": 1070
+      },
+      {
+        "name": "Set_Ground_Carrier",
+        "label": "Set values for ground carrier chosen",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Ground_Carrier"
+        },
+        "locationX": 700,
+        "locationY": 1070
+      },
+      {
+        "name": "Set_Carrier_Unknown",
+        "label": "Set values for carrier unknown",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Notification"
+        },
+        "locationX": 100,
+        "locationY": 1180
+      },
+      {
+        "name": "Set_Notify_Contact",
+        "label": "Set values for contact has an email",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Update_Notify_Contact"
+        },
+        "locationX": 400,
+        "locationY": 1180
+      },
+      {
+        "name": "Set_Notify_Owner_Only",
+        "label": "Set values for notify owner only",
+        "assignmentItems": [
+          {
+            "assignToReference": "OrderTotal",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "$Record.TotalAmount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Loop_Line_Items"
+        },
+        "locationX": 700,
+        "locationY": 1180
+      }
+    ],
+    "recordUpdates": [
+      {
+        "name": "Update_Activated",
+        "label": "Update the order for status equals activated",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Activated"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Order_Type"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 190
+      },
+      {
+        "name": "Update_Rush",
+        "label": "Update the order for rush order",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Rush"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Account_Tier"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 250,
+        "locationY": 300
+      },
+      {
+        "name": "Update_Standard",
+        "label": "Update the order for standard order",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Standard"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Account_Tier"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 300
+      },
+      {
+        "name": "Update_Enterprise",
+        "label": "Update the order for enterprise tier",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Enterprise"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Credit_Hold"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 250,
+        "locationY": 410
+      },
+      {
+        "name": "Update_Mid_Market",
+        "label": "Update the order for mid-market tier",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Mid_Market"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Credit_Hold"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 410
+      },
+      {
+        "name": "Update_On_Hold",
+        "label": "Update the order for credit hold flag set",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "On_Hold"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Stock"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 250,
+        "locationY": 520
+      },
+      {
+        "name": "Update_In_Stock",
+        "label": "Update the order for stock covers the order",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "In_Stock"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Region"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 850,
+        "locationY": 520
+      },
+      {
+        "name": "Update_Domestic",
+        "label": "Update the order for domestic shipping",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Domestic"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Discount"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 630
+      },
+      {
+        "name": "Update_International",
+        "label": "Update the order for international shipping",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "International"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Discount"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 850,
+        "locationY": 630
+      },
+      {
+        "name": "Update_Volume_Discount",
+        "label": "Update the order for ten or more items",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Volume_Discount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Tax"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 740
+      },
+      {
+        "name": "Update_Loyalty_Discount",
+        "label": "Update the order for loyal customer",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Loyalty_Discount"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Tax"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 850,
+        "locationY": 740
+      },
+      {
+        "name": "Update_Taxable",
+        "label": "Update the order for taxable region",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Taxable"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Open_Cases"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 850
+      },
+      {
+        "name": "Update_Has_Open_Cases",
+        "label": "Update the order for open cases found",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Has_Open_Cases"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Delivery_Window"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 250,
+        "locationY": 960
+      },
+      {
+        "name": "Update_Overdue",
+        "label": "Update the order for more than 7 days",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Overdue"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Carrier"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 850,
+        "locationY": 960
+      },
+      {
+        "name": "Update_Express_Carrier",
+        "label": "Update the order for express carrier chosen",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Express_Carrier"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Notification"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 1070
+      },
+      {
+        "name": "Update_Ground_Carrier",
+        "label": "Update the order for ground carrier chosen",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Ground_Carrier"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Check_Notification"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 850,
+        "locationY": 1070
+      },
+      {
+        "name": "Update_Notify_Contact",
+        "label": "Update the order for contact has an email",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Fulfilment_Stage__c",
+            "value": {
+              "stringValue": "Notify_Contact"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Loop_Line_Items"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 550,
+        "locationY": 1180
+      },
+      {
+        "name": "Mark_Fulfilled",
+        "label": "Mark the order fulfilled",
+        "inputReference": "$Record",
+        "inputAssignments": [
+          {
+            "field": "Status",
+            "value": {
+              "stringValue": "Fulfilled"
+            }
+          }
+        ],
+        "faultConnector": {
+          "targetReference": "Fail_Update"
+        },
+        "locationX": 100,
+        "locationY": 1400
+      }
+    ],
+    "actionCalls": [
+      {
+        "name": "Reserve_Stock",
+        "label": "Reserve stock for the item",
+        "actionName": "InventoryService.reserve",
+        "actionType": "apex",
+        "inputParameters": [
+          {
+            "name": "itemId",
+            "value": {
+              "elementReference": "Loop_Line_Items.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Loop_Line_Items"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Reserve"
+        },
+        "locationX": 250,
+        "locationY": 1290
+      },
+      {
+        "name": "Send_Confirmation_Email",
+        "label": "Send the confirmation email",
+        "actionName": "emailSimple",
+        "actionType": "emailSimple",
+        "inputParameters": [
+          {
+            "name": "emailBody",
+            "value": {
+              "elementReference": "Fulfilment_Email_Body"
+            }
+          },
+          {
+            "name": "emailAddresses",
+            "value": {
+              "elementReference": "Get_Contact.Email"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Post_To_Chatter"
+        },
+        "faultConnector": {
+          "targetReference": "Fail_Email"
+        },
+        "locationX": 400,
+        "locationY": 1290
+      },
+      {
+        "name": "Post_To_Chatter",
+        "label": "Post to the account feed",
+        "actionName": "chatterPost",
+        "actionType": "chatterPost",
+        "inputParameters": [
+          {
+            "name": "text",
+            "value": {
+              "stringValue": "Order fulfilled."
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Notify_Warehouse"
+        },
+        "locationX": 550,
+        "locationY": 1290
+      },
+      {
+        "name": "Notify_Warehouse",
+        "label": "Notify the warehouse team",
+        "actionName": "customNotificationAction",
+        "actionType": "customNotificationAction",
+        "inputParameters": [
+          {
+            "name": "title",
+            "value": {
+              "stringValue": "Notify the warehouse team"
+            }
+          },
+          {
+            "name": "body",
+            "value": {
+              "elementReference": "Fulfilment_Email_Body"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Notify_Finance"
+        },
+        "locationX": 100,
+        "locationY": 1200
+      },
+      {
+        "name": "Notify_Finance",
+        "label": "Notify finance of the invoice",
+        "actionName": "customNotificationAction",
+        "actionType": "customNotificationAction",
+        "inputParameters": [
+          {
+            "name": "title",
+            "value": {
+              "stringValue": "Notify finance of the invoice"
+            }
+          },
+          {
+            "name": "body",
+            "value": {
+              "elementReference": "Fulfilment_Email_Body"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Notify_Account_Owner"
+        },
+        "locationX": 250,
+        "locationY": 1200
+      },
+      {
+        "name": "Notify_Account_Owner",
+        "label": "Notify the account owner",
+        "actionName": "customNotificationAction",
+        "actionType": "customNotificationAction",
+        "inputParameters": [
+          {
+            "name": "title",
+            "value": {
+              "stringValue": "Notify the account owner"
+            }
+          },
+          {
+            "name": "body",
+            "value": {
+              "elementReference": "Fulfilment_Email_Body"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Schedule_Delivery"
+        },
+        "locationX": 400,
+        "locationY": 1200
+      }
+    ],
+    "loops": [
+      {
+        "name": "Loop_Line_Items",
+        "label": "For each line item",
+        "collectionReference": "Get_Order_Items",
+        "iterationOrder": "Asc",
+        "nextValueConnector": {
+          "targetReference": "Reserve_Stock"
+        },
+        "noMoreValuesConnector": {
+          "targetReference": "Send_Confirmation_Email"
+        },
+        "locationX": 100,
+        "locationY": 1290
+      }
+    ],
+    "subflows": [
+      {
+        "name": "Schedule_Delivery",
+        "label": "Schedule the delivery",
+        "flowName": "Delivery_Scheduler",
+        "inputAssignments": [
+          {
+            "name": "orderId",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Log_Fulfilment"
+        },
+        "locationX": 700,
+        "locationY": 1290
+      },
+      {
+        "name": "Log_Fulfilment",
+        "label": "Write the fulfilment log",
+        "flowName": "Fulfilment_Logger",
+        "inputAssignments": [
+          {
+            "name": "orderId",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Mark_Fulfilled"
+        },
+        "locationX": 850,
+        "locationY": 1290
+      }
+    ],
+    "customErrors": [
+      {
+        "name": "Fail_Lookup",
+        "label": "Stop: a lookup failed",
+        "customErrorMessages": [
+          {
+            "errorMessage": "Stop: a lookup failed. Contact the order desk.",
+            "isFieldError": false
+          }
+        ],
+        "locationX": 250,
+        "locationY": 1400
+      },
+      {
+        "name": "Fail_Update",
+        "label": "Stop: an update failed",
+        "customErrorMessages": [
+          {
+            "errorMessage": "Stop: an update failed. Contact the order desk.",
+            "isFieldError": false
+          }
+        ],
+        "locationX": 400,
+        "locationY": 1400
+      },
+      {
+        "name": "Fail_Reserve",
+        "label": "Stop: stock could not be reserved",
+        "customErrorMessages": [
+          {
+            "errorMessage": "Stop: stock could not be reserved. Contact the order desk.",
+            "isFieldError": false
+          }
+        ],
+        "locationX": 550,
+        "locationY": 1400
+      },
+      {
+        "name": "Fail_Email",
+        "label": "Stop: the email could not be sent",
+        "customErrorMessages": [
+          {
+            "errorMessage": "Stop: the email could not be sent. Contact the order desk.",
+            "isFieldError": false
+          }
+        ],
+        "locationX": 700,
+        "locationY": 1400
+      }
+    ],
+    "variables": [
+      {
+        "name": "OrderTotal",
+        "dataType": "Currency",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "scale": 2
+      },
+      {
+        "name": "ShippingRegion",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false
+      },
+      {
+        "name": "LineItems",
+        "dataType": "SObject",
+        "objectType": "OrderItem",
+        "isCollection": true,
+        "isInput": false,
+        "isOutput": false
+      },
+      {
+        "name": "NotificationRecipients",
+        "dataType": "String",
+        "isCollection": true,
+        "isInput": false,
+        "isOutput": false
+      }
+    ],
+    "formulas": [
+      {
+        "name": "Is_Rush_Order",
+        "dataType": "Boolean",
+        "expression": "{!$Record.Rush_Delivery__c} && {!$Record.TotalAmount} > 500"
+      },
+      {
+        "name": "Days_Since_Order",
+        "dataType": "Number",
+        "expression": "TODAY() - DATEVALUE({!$Record.EffectiveDate})",
+        "scale": 0
+      }
+    ],
+    "textTemplates": [
+      {
+        "name": "Fulfilment_Email_Body",
+        "isViewedAsPlainText": true,
+        "text": "Order {!$Record.OrderNumber} is on its way to {!ShippingRegion}."
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "",
+  "mode": "draw",
+  "variant": "business",
+  "passMatchers": {
+    "diagram": {
+      "minNodes": 6,
+      "maxNodes": 18,
+      "identifiersInFlow": true
+    }
+  }
+}

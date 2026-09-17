@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Draw this flow > the business variant is the default: one flowchart TD, 8 to 15 nodes, plain labels, no API names 1`] = `
+"<response_contract mode="draw" variant="business">
+Answer with exactly one \`\`\`mermaid code block containing a flowchart TD, then two or three sentences on what the picture shows. Diagram rules: every box or diamond corresponds to a real element or decision outcome in the flow, nothing invented; node ids are short identifiers such as A, B, C1 with the label in double quotes, for example A["Checks the account type"]; decisions are diamonds, for example B{"Enterprise account?"}; an edge may carry a short outcome label in pipes, for example B -->|Yes| C; no subgraphs, no HTML in labels, no parentheses, quotes, or semicolons inside labels. An outcome or element with no connector simply has no outgoing edge; never add a placeholder box for a missing target. Pitch it at a business reader: 8 to 15 nodes in total, counting every box and diamond, plain-language labels, no API names. When the flow has more steps than that, merge consecutive checks or steps into one box rather than adding nodes, so the main paths stay clear.
+</response_contract>
+<user_question>
+Draw this flow.
+</user_question>"
+`;
+
+exports[`assembleUserTurn > Overview carries the contract and a default question; nothing typed leaves the bubble to the pill 1`] = `
+"<response_contract mode="overview">
+Write an overview of this flow with exactly these sections, in this order, as Markdown headings: Purpose · Trigger and entry criteria · Main paths (name each by its outcome) · Data written (by object) · External calls · Worth knowing. 200–400 words. Use exact element names.
+</response_contract>
+<user_question>
+Give me an overview of this flow.
+</user_question>"
+`;

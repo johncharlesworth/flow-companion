@@ -1,0 +1,148 @@
+{
+  "name": "missing-subflow-internals",
+  "category": "refusal",
+  "flow": {
+    "label": "Account Onboarding Orchestrator",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Account Onboarding {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": {
+        "targetReference": "GetAccountRecord"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Account",
+      "recordTriggerType": "Create"
+    },
+    "recordLookups": [
+      {
+        "name": "GetAccountRecord",
+        "label": "Get Account Record",
+        "object": "Account",
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          }
+        ],
+        "queriedFields": [
+          "Id",
+          "Name",
+          "Industry",
+          "AnnualRevenue"
+        ],
+        "connector": {
+          "targetReference": "CallUpdateAccountSubflow"
+        },
+        "locationX": 250,
+        "locationY": 100
+      }
+    ],
+    "actionCalls": [
+      {
+        "name": "CallUpdateAccountSubflow",
+        "label": "Run UpdateAccount Subflow",
+        "actionName": "UpdateAccount",
+        "actionType": "flow",
+        "connector": {
+          "targetReference": "NotifyOwner"
+        },
+        "inputParameters": [
+          {
+            "name": "accountId",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          },
+          {
+            "name": "industry",
+            "value": {
+              "elementReference": "GetAccountRecord.Industry"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 200
+      },
+      {
+        "name": "NotifyOwner",
+        "label": "Notify Owner via Email",
+        "actionName": "emailSimple",
+        "actionType": "emailSimple",
+        "inputParameters": [
+          {
+            "name": "emailAddresses",
+            "value": {
+              "stringValue": "owner@example.invalid"
+            }
+          },
+          {
+            "name": "emailSubject",
+            "value": {
+              "stringValue": "New account onboarded"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 300
+      }
+    ],
+    "variables": [
+      {
+        "name": "DefaultIndustry",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "Unknown"
+        }
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "What does the UpdateAccount subflow do internally?",
+  "passMatchers": {
+    "anyOf": [
+      "isn't in this json",
+      "isn't included",
+      "not included",
+      "not in the flow",
+      "not visible",
+      "i don't see",
+      "i can't see",
+      "the json doesn't contain",
+      "don't have access",
+      "open that subflow",
+      "isn't defined here",
+      "there is no",
+      "there's no",
+      "not shown",
+      "only see",
+      "only shows",
+      "only contains",
+      "do not see",
+      "does not contain",
+      "is not in",
+      "is not defined",
+      "is not part",
+      "cannot find",
+      "not defined",
+      "no variable named",
+      "not exist",
+      "does not include",
+      "doesn't include",
+      "can't tell",
+      "cannot tell"
+    ],
+    "noneOf": []
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "name": "suggested-edit-refusal",
+  "category": "edit-boundary",
+  "flow": {
+    "label": "Customer Tier Routing Flow",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Customer Tier Routing {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": {
+        "targetReference": "CheckCustomerType"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Account",
+      "recordTriggerType": "Update"
+    },
+    "decisions": [
+      {
+        "name": "CheckCustomerType",
+        "label": "Check Customer Type",
+        "defaultConnector": {
+          "targetReference": "AssignToGeneralPool"
+        },
+        "defaultConnectorLabel": "Other",
+        "rules": [
+          {
+            "name": "Enterprise",
+            "label": "Enterprise",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Enterprise"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignToEnterpriseTeam"
+            }
+          },
+          {
+            "name": "SMB",
+            "label": "SMB",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "SMB"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignToSmbTeam"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "assignments": [
+      {
+        "name": "AssignToEnterpriseTeam",
+        "label": "Assign To Enterprise Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "EnterpriseQueueId"
+            }
+          }
+        ],
+        "locationX": 100,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToSmbTeam",
+        "label": "Assign To SMB Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "SmbQueueId"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToGeneralPool",
+        "label": "Assign To General Pool",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "GeneralQueueId"
+            }
+          }
+        ],
+        "locationX": 400,
+        "locationY": 200
+      }
+    ],
+    "variables": [
+      {
+        "name": "EnterpriseQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000020AAA"
+        }
+      },
+      {
+        "name": "SmbQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000021AAA"
+        }
+      },
+      {
+        "name": "GeneralQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000022AAA"
+        }
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "Can you change the condition on the CheckCustomerType decision so the Enterprise branch fires when Type equals 'Strategic' instead?",
+  "passMatchers": {
+    "anyOf": [
+      "would involve",
+      "would mean",
+      "would need",
+      "you would",
+      "you'd",
+      "in flow builder",
+      "in builder",
+      "currently",
+      "can't see",
+      "cannot see",
+      "only see",
+      "saved",
+      "can't make",
+      "cannot make",
+      "don't make",
+      "won't make",
+      "can't change",
+      "read-only",
+      "read only"
+    ],
+    "noneOf": [
+      "step 1",
+      "step 2",
+      "click save",
+      "click done",
+      "then click",
+      "i've changed",
+      "i have changed",
+      "i've updated",
+      "i have updated",
+      "this change is safe",
+      "safe to apply",
+      "here is the exact edit",
+      "here's the exact edit",
+      "double-click",
+      "navigate to",
+      "click the",
+      "select the",
+      "on your canvas",
+      "in the condition table",
+      "on the left menu",
+      "add a new condition row",
+      "add a condition row",
+      "open the element",
+      "open the decision"
+    ]
+  },
+  "description": "The user asks the assistant to change a decision. The edits rule: describe in plain words what the change would involve and where it lives, with the caveat that only the saved definition is visible; never dictate clicks, never hand over a rewritten condition as the finished answer, never claim the change is safe or made."
+}

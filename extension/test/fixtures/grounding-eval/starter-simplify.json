@@ -1,0 +1,196 @@
+{
+  "name": "starter-simplify",
+  "category": "edit-boundary",
+  "note": "One of the starter questions the quick-actions menu suggests (2026-09-05). The answer must stay on the describing side of the edits rule: a caveat that only the saved definition is visible and Builder or the org must be checked, and no click-by-click instructions or claim to have changed anything. (A first version looked for reason-words such as \"because\"; GPT-5.6 reasoned well without any of them.)",
+  "flow": {
+    "label": "Customer Tier Routing Flow",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Customer Tier Routing {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": {
+        "targetReference": "CheckCustomerType"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Account",
+      "recordTriggerType": "Update"
+    },
+    "decisions": [
+      {
+        "name": "CheckCustomerType",
+        "label": "Check Customer Type",
+        "defaultConnector": {
+          "targetReference": "AssignToGeneralPool"
+        },
+        "defaultConnectorLabel": "Other",
+        "rules": [
+          {
+            "name": "Enterprise",
+            "label": "Enterprise",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Enterprise"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignToEnterpriseTeam"
+            }
+          },
+          {
+            "name": "SMB",
+            "label": "SMB",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "SMB"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignToSmbTeam"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "assignments": [
+      {
+        "name": "AssignToEnterpriseTeam",
+        "label": "Assign To Enterprise Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "EnterpriseQueueId"
+            }
+          }
+        ],
+        "locationX": 100,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToSmbTeam",
+        "label": "Assign To SMB Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "SmbQueueId"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToGeneralPool",
+        "label": "Assign To General Pool",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "GeneralQueueId"
+            }
+          }
+        ],
+        "locationX": 400,
+        "locationY": 200
+      }
+    ],
+    "variables": [
+      {
+        "name": "EnterpriseQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000020AAA"
+        }
+      },
+      {
+        "name": "SmbQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000021AAA"
+        }
+      },
+      {
+        "name": "GeneralQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000022AAA"
+        }
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "What would you simplify, and why?",
+  "passMatchers": {
+    "anyOf": [
+      "saved",
+      "only see",
+      "only assess",
+      "can't see",
+      "cannot see",
+      "in builder",
+      "in flow builder",
+      "in the org",
+      "need checking",
+      "worth checking",
+      "check it",
+      "check them",
+      "check in",
+      "verify"
+    ],
+    "noneOf": [
+      "step 1",
+      "step 2",
+      "click save",
+      "click done",
+      "then click",
+      "i've changed",
+      "i have changed",
+      "i've updated",
+      "i have updated",
+      "this change is safe",
+      "safe to apply",
+      "here is the exact edit",
+      "here's the exact edit",
+      "double-click",
+      "navigate to",
+      "click the",
+      "select the",
+      "on your canvas",
+      "in the condition table",
+      "on the left menu",
+      "add a new condition row",
+      "add a condition row",
+      "open the element",
+      "open the decision"
+    ]
+  }
+}

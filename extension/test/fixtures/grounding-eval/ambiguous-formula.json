@@ -1,0 +1,100 @@
+{
+  "name": "ambiguous-formula",
+  "category": "hedge",
+  "flow": {
+    "label": "Opportunity Scoring Flow",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Opp Scoring {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": { "targetReference": "RunExternalScoring" },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Opportunity",
+      "recordTriggerType": "Update"
+    },
+    "actionCalls": [
+      {
+        "name": "RunExternalScoring",
+        "label": "Run External Scoring Apex",
+        "actionName": "AcmeScoring.calculate",
+        "actionType": "apex",
+        "connector": { "targetReference": "EvaluateScoreBucket" },
+        "inputParameters": [
+          { "name": "opportunityId", "value": { "elementReference": "$Record.Id" } }
+        ],
+        "outputParameters": [
+          { "name": "score", "assignToReference": "ExternalScore" }
+        ],
+        "locationX": 250,
+        "locationY": 100
+      }
+    ],
+    "formulas": [
+      {
+        "name": "ScoreBucketLabel",
+        "label": "Score Bucket Label",
+        "dataType": "String",
+        "expression": "IF({!ExternalScore} > 0, \"A\", \"B\")"
+      }
+    ],
+    "decisions": [
+      {
+        "name": "EvaluateScoreBucket",
+        "label": "Evaluate Score Bucket",
+        "defaultConnector": null,
+        "defaultConnectorLabel": "Done",
+        "rules": [
+          {
+            "name": "BucketA",
+            "label": "Bucket A",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "ScoreBucketLabel",
+                "operator": "EqualTo",
+                "rightValue": { "stringValue": "A" }
+              }
+            ],
+            "connector": null
+          }
+        ],
+        "locationX": 250,
+        "locationY": 220
+      }
+    ],
+    "variables": [
+      {
+        "name": "ExternalScore",
+        "dataType": "Number",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "scale": 2
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "What value does the ScoreBucketLabel formula return at runtime?",
+  "passMatchers": {
+    "anyOf": [
+      "depends on",
+      "would depend",
+      "can't determine",
+      "cannot determine",
+      "i can't tell",
+      "i don't know",
+      "not visible",
+      "isn't visible",
+      "external",
+      "apex",
+      "at runtime",
+      "without",
+      "depending on"
+    ],
+    "noneOf": []
+  }
+}

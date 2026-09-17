@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Brand mark: one diamond, Flow Builder's decision shape, in the
+       marker colour. The tile is the app-icon frame; it is what makes the diamond read
+       at 16px in a Chrome toolbar, which is where this icon actually lives. The diamond
+       is proportionally tighter than the tile (7/56 against 28/128) on purpose: a shape
+       inside a frame wants to be crisper than the frame, or the whole mark goes soft. -->
+  <rect x="0" y="0" width="128" height="128" rx="28" fill="#1F6F78"/>
+  <rect x="35.84" y="35.84" width="56.32" height="56.32" rx="7" transform="rotate(45 64 64)" fill="#FFFFFF"/>
+</svg>

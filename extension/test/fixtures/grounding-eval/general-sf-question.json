@@ -1,0 +1,57 @@
+{
+  "name": "general-sf-question",
+  "category": "positive-general",
+  "flow": {
+    "label": "Simple Contact Update Flow",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Contact Update {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": { "targetReference": "UpdateLastTouched" },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Contact",
+      "recordTriggerType": "Update"
+    },
+    "recordUpdates": [
+      {
+        "name": "UpdateLastTouched",
+        "label": "Update Last Touched Date",
+        "inputAssignments": [
+          { "field": "Last_Touched__c", "value": { "elementReference": "$Flow.CurrentDate" } }
+        ],
+        "filterLogic": "and",
+        "filters": [
+          {
+            "field": "Id",
+            "operator": "EqualTo",
+            "value": { "elementReference": "$Record.Id" }
+          }
+        ],
+        "object": "Contact",
+        "locationX": 250,
+        "locationY": 100
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "What's the difference between a Decision and an Assignment in Salesforce Flow?",
+  "passMatchers": {
+    "anyOf": [
+      "decision",
+      "assignment",
+      "evaluate",
+      "branch",
+      "assigns",
+      "set",
+      "value",
+      "outcome",
+      "condition",
+      "path"
+    ],
+    "noneOf": []
+  }
+}

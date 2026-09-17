@@ -1,0 +1,81 @@
+{
+  "name": "flow-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome side-panel extension: chat about the Salesforce Flow you have open, with your own AI key.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "eval": "node --env-file-if-exists=.env.eval node_modules/vitest/vitest.mjs run --config vitest.eval.config.ts",
+    "size": "node scripts/check-bundle-size.ts",
+    "links": "node scripts/check-links.ts",
+    "icons": "node scripts/render-icons.ts",
+    "build:gallery": "WXT_GALLERY=1 wxt build",
+    "screenshots": "npm run build:gallery && node scripts/screenshots.ts",
+    "pii": "cd .. && git ls-files -z | xargs -0 bash scripts/scan-for-pii.sh",
+    "check": "npm run pii && npm run lint && npm run typecheck && npm test && npm run build && npm run size && npm run e2e"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.7.0",
+    "@excalidraw/mermaid-to-excalidraw": "^2.2.2",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.40.0",
+    "mermaid": "^11.17.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "rehype-harden": "^1.1.8",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
+    "streamdown": "^2.6.0"
+  },
+  "devDependencies": {
+    "@eslint-react/eslint-plugin": "^5.18.7",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.62.1",
+    "@shikijs/engine-javascript": "^4.4.3",
+    "@shikijs/langs": "^4.4.3",
+    "@shikijs/themes": "^4.4.3",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@wxt-dev/module-react": "1.2.2",
+    "eslint": "10.9.1",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.12.0",
+    "happy-dom": "20.13.2",
+    "shiki": "^4.4.3",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.69.0",
+    "vite": "8.2.2",
+    "vitest": "4.1.11",
+    "wxt": "0.21.4"
+  },
+  "overrides": {
+    "eslint": "$eslint",
+    "@excalidraw/mermaid-to-excalidraw": {
+      "nanoid": "^6.0.1",
+      "@mermaid-js/parser": "^1.2.1"
+    }
+  }
+}

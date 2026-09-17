@@ -1,0 +1,323 @@
+@import 'tailwindcss';
+
+/* Tailwind 4 resets buttons to the arrow cursor; clickable things show the hand (real-Chrome check). */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
+/* IBM Plex, bundled (extensions cannot load fonts from the web). Latin only. */
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+
+/*
+ * The complete token table from the . Light is the default;
+ * dark applies when the user chose it (data-theme="dark") or when the system
+ * prefers it and the user chose nothing. Tokens are scoped to any element
+ * carrying data-theme so the gallery can show both themes side by side.
+ */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --composer-field: #ffffff;
+  --border-hairline: #e4e1db;
+  --text-1: #1c1b19;
+  --text-2: #55524c;
+  --text-3: #706c65;
+  --accent: #1f6f78;
+  --accent-fg: #ffffff;
+  --accent-subtle: #e0eef0;
+  --success: #2e7d4f;
+  --warning: #9a6700;
+  --danger: #b42318;
+  --shadow-elevated: 0 4px 16px rgba(28, 27, 25, 0.12), 0 1px 3px rgba(28, 27, 25, 0.08);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #161513;
+  --surface: #1f1e1b;
+  --surface-elevated: #262421;
+  --composer-field: #1f1e1b;
+  --border-hairline: #33312d;
+  --text-1: #eceae4;
+  --text-2: #b5b1a8;
+  --text-3: #8a867e;
+  --accent: #6fbfc7;
+  --accent-fg: #0f1a13;
+  --accent-subtle: #1c3237;
+  --success: #6fcf97;
+  --warning: #e5b85c;
+  --danger: #f08a80;
+  --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #161513;
+    --surface: #1f1e1b;
+    --surface-elevated: #262421;
+    --composer-field: #1f1e1b;
+    --border-hairline: #33312d;
+    --text-1: #eceae4;
+    --text-2: #b5b1a8;
+    --text-3: #8a867e;
+    --accent: #6fbfc7;
+    --accent-fg: #0f1a13;
+    --accent-subtle: #1c3237;
+    --success: #6fcf97;
+    --warning: #e5b85c;
+    --danger: #f08a80;
+    --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Utilities read the runtime tokens, so one class works in both themes. */
+@theme inline {
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-composer: var(--composer-field);
+  --color-hairline: var(--border-hairline);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --shadow-elevated: var(--shadow-elevated);
+  --radius-composer: 12px;
+  --radius-popover: 12px;
+  --radius-button: 8px;
+  --radius-code: 6px;
+  --radius-pill: 999px;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-1);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Focus ring: 2px accent, 2px offset, keyboard only. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+/* Chip fills for the version chip: the design names "success-subtle" and
+   "warning-subtle" fills; they are the success/warning tokens mixed into the
+   surface, not new colours. */
+@utility fill-success-subtle {
+  background-color: color-mix(in oklab, var(--success) 16%, var(--surface));
+}
+@utility fill-warning-subtle {
+  background-color: color-mix(in oklab, var(--warning) 16%, var(--surface));
+}
+
+/* Answers: full-width real typography (principle 2). */
+.answer {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-1);
+}
+.answer > * + * {
+  margin-top: 0.6em;
+}
+.answer h1,
+.answer h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 1em;
+}
+.answer h3,
+.answer h4,
+.answer h5,
+.answer h6 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 0.9em;
+}
+.answer ul,
+.answer ol {
+  padding-left: 1.4em;
+}
+.answer ul {
+  list-style: disc;
+}
+.answer ol {
+  list-style: decimal;
+}
+.answer li + li {
+  margin-top: 0.2em;
+}
+.answer a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.answer code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.answer :not(pre) > code {
+  background: var(--surface);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.answer pre {
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 10px 12px;
+}
+/* Streamdown's code-block header holds only the language label and the copy and
+   download controls; with controls off it is an empty bar. Answers have the
+   footer's Copy instead. */
+.answer [data-streamdown='code-block-header'] {
+  display: none;
+}
+.answer [data-streamdown='code-block'] {
+  border: 0;
+}
+.answer table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.answer th,
+.answer td {
+  border: 1px solid var(--border-hairline);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.answer th {
+  font-weight: 600;
+  background: var(--surface);
+}
+.answer blockquote {
+  border-left: 2px solid var(--border-hairline);
+  padding-left: 10px;
+  color: var(--text-2);
+}
+.answer hr {
+  border: 0;
+  border-top: 1px solid var(--border-hairline);
+}
+
+/* Shiki dual themes: the dark variables win under the dark theme. */
+[data-theme='dark'] .answer .shiki,
+[data-theme='dark'] .answer .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .answer .shiki,
+  :root:not([data-theme='light']) .answer .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+}
+
+/* Streamdown wrappers use Tailwind's default border colour; ours is the hairline. */
+.answer *,
+.answer *::before,
+.answer *::after {
+  border-color: var(--border-hairline);
+}
+
+/* Draw this flow: the diagram in the tokens' colours in both
+   themes. Mermaid scopes its own <style> by the SVG's id, so these win with
+   !important; the neutral theme underneath keeps anything unlisted grey. */
+.answer .flow-diagram {
+  margin: 0.6em 0;
+  overflow-x: auto;
+}
+.answer .flow-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--font-sans) !important;
+}
+.answer .flow-diagram .node rect,
+.answer .flow-diagram .node polygon,
+.answer .flow-diagram .node circle,
+.answer .flow-diagram .node ellipse,
+.answer .flow-diagram .node path {
+  fill: var(--surface) !important;
+  stroke: var(--accent) !important;
+  stroke-width: 1.25px !important;
+}
+.answer .flow-diagram .node text,
+.answer .flow-diagram .node .label,
+.answer .flow-diagram .nodeLabel {
+  fill: var(--text-1) !important;
+  color: var(--text-1) !important;
+}
+.answer .flow-diagram .edgePath .path,
+.answer .flow-diagram .flowchart-link {
+  stroke: var(--text-3) !important;
+}
+.answer .flow-diagram .marker,
+.answer .flow-diagram .arrowheadPath {
+  fill: var(--text-3) !important;
+  stroke: var(--text-3) !important;
+}
+.answer .flow-diagram .edgeLabel rect,
+.answer .flow-diagram .edgeLabel .background {
+  fill: var(--bg) !important;
+  opacity: 1 !important;
+}
+.answer .flow-diagram .edgeLabel,
+.answer .flow-diagram .edgeLabel text,
+.answer .flow-diagram .edgeLabel .label {
+  fill: var(--text-2) !important;
+  color: var(--text-2) !important;
+  background: transparent !important;
+}
+/* The diagram's text while it is still arriving or being drawn, and after a parse failure. */
+.answer .flow-diagram-source,
+.answer .flow-diagram-failed pre {
+  white-space: pre-wrap;
+}
+.answer .flow-diagram-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}

@@ -1,0 +1,178 @@
+{
+  "name": "grounded-positive",
+  "category": "positive-grounded",
+  "flow": {
+    "label": "Customer Tier Routing Flow",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Customer Tier Routing {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": { "targetReference": "CheckCustomerType" },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Account",
+      "recordTriggerType": "Update"
+    },
+    "decisions": [
+      {
+        "name": "CheckCustomerType",
+        "label": "Check Customer Type",
+        "defaultConnector": { "targetReference": "AssignToGeneralPool" },
+        "defaultConnectorLabel": "Other",
+        "rules": [
+          {
+            "name": "Enterprise",
+            "label": "Enterprise",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": { "stringValue": "Enterprise" }
+              }
+            ],
+            "connector": { "targetReference": "AssignToEnterpriseTeam" }
+          },
+          {
+            "name": "SMB",
+            "label": "SMB",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": { "stringValue": "SMB" }
+              }
+            ],
+            "connector": { "targetReference": "AssignToSmbTeam" }
+          },
+          {
+            "name": "Partner",
+            "label": "Partner",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Type",
+                "operator": "EqualTo",
+                "rightValue": { "stringValue": "Partner" }
+              }
+            ],
+            "connector": { "targetReference": "AssignToPartnerTeam" }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "assignments": [
+      {
+        "name": "AssignToEnterpriseTeam",
+        "label": "Assign To Enterprise Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": { "elementReference": "EnterpriseQueueId" }
+          }
+        ],
+        "locationX": 50,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToSmbTeam",
+        "label": "Assign To SMB Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": { "elementReference": "SmbQueueId" }
+          }
+        ],
+        "locationX": 200,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToPartnerTeam",
+        "label": "Assign To Partner Team",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": { "elementReference": "PartnerQueueId" }
+          }
+        ],
+        "locationX": 350,
+        "locationY": 200
+      },
+      {
+        "name": "AssignToGeneralPool",
+        "label": "Assign To General Pool",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": { "elementReference": "GeneralQueueId" }
+          }
+        ],
+        "locationX": 500,
+        "locationY": 200
+      }
+    ],
+    "variables": [
+      {
+        "name": "EnterpriseQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": { "stringValue": "00G000000000010AAA" }
+      },
+      {
+        "name": "SmbQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": { "stringValue": "00G000000000011AAA" }
+      },
+      {
+        "name": "PartnerQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": { "stringValue": "00G000000000012AAA" }
+      },
+      {
+        "name": "GeneralQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": { "stringValue": "00G000000000013AAA" }
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "What does the CheckCustomerType decision do?",
+  "passMatchers": {
+    "anyOf": [
+      "checkcustomertype",
+      "customer type",
+      "enterprise",
+      "smb",
+      "partner",
+      "$record.type",
+      "record.type",
+      "type",
+      "outcome",
+      "rule",
+      "branch",
+      "default"
+    ],
+    "noneOf": []
+  }
+}

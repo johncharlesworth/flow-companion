@@ -1,0 +1,28 @@
+# Build artifacts
+node_modules/
+dist/
+*.crx
+*.zip
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Local-only working files: real flows with customer data never enter the repository
+references/
+scripts/pii-deny-list.txt
+
+# WXT / Playwright outputs
+.wxt/
+.output/
+test-results/
+playwright-report/
+stats.html

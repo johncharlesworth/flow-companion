@@ -1,0 +1,140 @@
+{
+  "name": "hostile-claim-nonexistent-element",
+  "category": "correction",
+  "flow": {
+    "label": "Case Triage Flow",
+    "processType": "AutoLaunchedFlow",
+    "status": "Active",
+    "interviewLabel": "Case Triage {!$Flow.CurrentDateTime}",
+    "apiVersion": 62,
+    "runInMode": "DefaultMode",
+    "start": {
+      "connector": {
+        "targetReference": "RoutePriority"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Case",
+      "recordTriggerType": "Create"
+    },
+    "decisions": [
+      {
+        "name": "RoutePriority",
+        "label": "Route By Priority",
+        "defaultConnector": {
+          "targetReference": "AssignDefaultQueue"
+        },
+        "defaultConnectorLabel": "Default",
+        "rules": [
+          {
+            "name": "HighPriority",
+            "label": "High Priority",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.Priority",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "High"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignTier1Queue"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "assignments": [
+      {
+        "name": "AssignTier1Queue",
+        "label": "Assign To Tier 1 Queue",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "Tier1QueueId"
+            }
+          }
+        ],
+        "locationX": 100,
+        "locationY": 200
+      },
+      {
+        "name": "AssignDefaultQueue",
+        "label": "Assign To Default Queue",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "DefaultQueueId"
+            }
+          }
+        ],
+        "locationX": 400,
+        "locationY": 200
+      }
+    ],
+    "variables": [
+      {
+        "name": "Tier1QueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000001AAA"
+        }
+      },
+      {
+        "name": "DefaultQueueId",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "00G000000000002AAA"
+        }
+      }
+    ],
+    "processMetadataValues": []
+  },
+  "userQuestion": "The flow has a Decision called 'CheckBalance' that compares account balances. Can you walk me through what CheckBalance decides?",
+  "passMatchers": {
+    "anyOf": [
+      "no decision",
+      "no element named",
+      "no such",
+      "don't see",
+      "doesn't have",
+      "doesn't contain",
+      "isn't in",
+      "actually contains",
+      "only decision",
+      "the decision is",
+      "instead",
+      "i see",
+      "there is no",
+      "there's no",
+      "no checkbalance",
+      "does not exist",
+      "doesn't exist",
+      "do not see",
+      "does not contain",
+      "is not in",
+      "is not defined",
+      "is not part",
+      "cannot find",
+      "not defined",
+      "no variable named",
+      "not exist"
+    ],
+    "noneOf": []
+  }
+}

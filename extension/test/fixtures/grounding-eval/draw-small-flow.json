@@ -1,0 +1,186 @@
+{
+  "name": "draw-small-flow",
+  "category": "draw",
+  "note": "Draw this flow, business variant, on the six-element synthetic flow. The contract asks for 8 to 15 nodes; a flow this small cannot reach 8, so the floor is 3. Every API-looking name in the picture must exist in the flow.",
+  "flow": {
+    "actionCalls": [
+      {
+        "name": "UpdateAccount",
+        "label": "Update Account Info",
+        "actionName": "UpdateAccount",
+        "actionType": "flow",
+        "connector": {
+          "targetReference": "AssignFollowupOwner"
+        },
+        "inputParameters": [
+          {
+            "name": "accountId",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          },
+          {
+            "name": "newStatus",
+            "value": {
+              "stringValue": "Active"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 180
+      }
+    ],
+    "assignments": [
+      {
+        "name": "AssignFollowupOwner",
+        "label": "Assign Followup Owner",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "DefaultOwnerVariable"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "CreateFollowupTask"
+        },
+        "locationX": 250,
+        "locationY": 280
+      }
+    ],
+    "decisions": [
+      {
+        "name": "CheckCustomerType",
+        "label": "Check Customer Type",
+        "defaultConnector": {
+          "targetReference": "AssignFollowupOwner"
+        },
+        "defaultConnectorLabel": "Other",
+        "rules": [
+          {
+            "name": "Enterprise",
+            "label": "Enterprise",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.AccountType",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Enterprise"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "UpdateAccount"
+            }
+          },
+          {
+            "name": "SMB",
+            "label": "SMB",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.AccountType",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "SMB"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignFollowupOwner"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "formulas": [
+      {
+        "name": "AccountAgeInDays",
+        "label": "Account Age (Days)",
+        "dataType": "Number",
+        "expression": "TODAY() - DATEVALUE({!$Record.CreatedDate})",
+        "scale": 0
+      },
+      {
+        "name": "IsHighPriorityAccount",
+        "label": "Is High Priority",
+        "dataType": "Boolean",
+        "expression": "AND({!$Record.AnnualRevenue} > 1000000, {!AccountAgeInDays} > 365)"
+      }
+    ],
+    "recordCreates": [
+      {
+        "name": "CreateFollowupTask",
+        "label": "Create Followup Task",
+        "inputAssignments": [
+          {
+            "field": "Subject",
+            "value": {
+              "stringValue": "Follow up with customer"
+            }
+          },
+          {
+            "field": "WhatId",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          },
+          {
+            "field": "OwnerId",
+            "value": {
+              "elementReference": "$Record.OwnerId"
+            }
+          }
+        ],
+        "object": "Task",
+        "connector": null,
+        "locationX": 250,
+        "locationY": 380
+      }
+    ],
+    "start": {
+      "connector": {
+        "targetReference": "CheckCustomerType"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Account",
+      "recordTriggerType": "Update"
+    },
+    "variables": [
+      {
+        "name": "DefaultOwnerVariable",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "005000000000000AAA"
+        }
+      }
+    ],
+    "interviewLabel": "Synthetic Flow {!$Flow.CurrentDateTime}",
+    "label": "Synthetic Test Flow",
+    "processMetadataValues": [],
+    "processType": "AutoLaunchedFlow",
+    "runInMode": "DefaultMode",
+    "status": "Active",
+    "apiVersion": 62
+  },
+  "userQuestion": "",
+  "mode": "draw",
+  "variant": "business",
+  "passMatchers": {
+    "diagram": {
+      "minNodes": 3,
+      "maxNodes": 15,
+      "identifiersInFlow": true
+    }
+  }
+}

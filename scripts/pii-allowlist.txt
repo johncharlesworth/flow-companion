@@ -1,0 +1,136 @@
+# scripts/pii-allowlist.txt
+# Synthetic / example values that legitimately appear in the public artifacts
+# and would otherwise trigger the PII scanner. One literal string per line.
+# Lines starting with # are comments.
+#
+# Adding an entry: demonstrate it's synthetic, not real. Reviewed at PR time.
+
+# === Synthetic Salesforce tenant URLs (used throughout planning docs) ===
+mycompany.my.salesforce.com
+mycompany--sandbox.my.salesforce.com
+mycompany--sandbox.sandbox.my.salesforce.com
+mycompany--scratch.scratch.my.salesforce.com
+mycompany.my.salesforce-setup.com
+mycompany.lightning.force.com
+mycompany--sandbox.sandbox.lightning.force.com
+
+# === Synthetic adversarial-test hosts (auth-host-validation negative cases) ===
+attacker.com.my.salesforce.com.evil
+customsite.salesforce.com
+mysite.cloudforce.com
+community.force.com
+
+# === Synthetic Salesforce Org IDs used in test fixtures ===
+# Literal-X placeholder used as a fake org id in the extension's tests and
+# Playwright specs. Not a real Org ID.
+00DXXXXXXXXXXXX
+
+# === Synthetic emails used in test fixtures and documentation ===
+sentinel@example.invalid
+user@example.invalid
+support@flowchat.app
+
+# === Placeholder host of a retired build (kept as history) ===
+flowchat.workers.dev
+
+# === Partial SF_TENANT matches from synthetic sandbox URL examples ===
+# The SF_TENANT regex's [a-zA-Z0-9-]+ class starts matching at the leading
+# "--" of pattern docs like "*--sandbox.sandbox.my.salesforce.com"
+# (from the sandbox host variants). The full hostname
+# patterns are synthetic; the partial regex matches are too.
+--sandbox.sandbox.my.salesforce.com
+--sandbox.my.salesforce.com
+--scratch.scratch.my.salesforce.com
+# Synthetic Lightning sandbox host used in sf-host normalization tests
+# (extension/src/lib/sf-host.test.ts); the full hostname
+# "mycompany--sandbox.sandbox.lightning.force.com" is allowlisted above.
+sandbox.lightning.force.com
+
+# === Partial SF_TENANT match from synthetic adversarial-test hostname ===
+# From "attacker.com.my.salesforce.com.evil" the SF_TENANT regex matches the
+# inner "com.my.salesforce.com" substring (historic planning notes). The full hostname is already allowlisted above.
+com.my.salesforce.com
+# The malformed-prefix reject vectors "my company.my.salesforce.com" and
+# "my_company.my.salesforce.com" in extension/src/lib/sf-host.test.ts leave
+# this partial match for SF_TENANT. Synthetic; reviewed 2026-09-03.
+company.my.salesforce.com
+
+# === Synthetic Salesforce Flow IDs used in flow-extractor tests ===
+# Used in extension/src/lib/flow-extractor.test.ts to verify URL parsing of
+# the Flow Builder query parameters. The "XXXX0000ABCDxyz" body is an obvious
+# placeholder pattern, not a real Salesforce ID. 301 prefix = FlowVersion ID;
+# 300 prefix = FlowDefinition ID.
+301XXXX0000ABCDxyz
+300XXXX0000ABCDxyz
+# Two more of the same placeholder shape, used by the current build's
+# extension/src/lib/flow-extractor.test.ts and hooks/useActiveFlow.test.tsx to
+# tell a latest, an active, and a second flow's version apart. Reviewed 2026-09-03.
+301XXXX0000LATESTx
+301XXXX0000ACTIVEx
+301XXXX0000SECONDx
+300XXXX0000SECONDx
+
+# === Synthetic placeholder IDs used in fixture-content quotations ===
+005000000000000AAA
+
+# === Synthetic credential-injection reject vector (sf-host reject suite) ===
+# "user:pass@mycompany.my.salesforce.com" in extension/src/lib/sf-host.test.ts
+# checks that a URL with embedded credentials is rejected. The EMAIL scanner
+# matches "pass@mycompany.my.salesforce.com"; it is the synthetic adversarial
+# fragment, not an address.
+pass@mycompany.my.salesforce.com
+
+# === MIT License boilerplate words (false-positive SF_ID matches) ===
+# The standard MIT License text in LICENSE includes the words MERCHANTABILITY
+# and NONINFRINGEMENT, which are 15 characters long and begin with a
+# valid-looking 3-char Salesforce ID prefix ("MER", "NON"). They are not
+# Salesforce record IDs — they are common-law warranty disclaimer terms in
+# the MIT License (and most permissive OSS licenses). Reviewed at PR time.
+MERCHANTABILITY
+NONINFRINGEMENT
+
+# === Grounding-eval fixtures (extension/test/fixtures/grounding-eval/) ===
+# Twelve synthetic flows for the grounding eval. Their queue and
+# user ids are sequential placeholders (00G0000000000NNAAA, 0050000000000NNAAA)
+# and the e-mail addresses use the RFC 2606 reserved .invalid TLD. Reviewed
+# 2026-09-03 when the fixtures were committed.
+00G000000000001AAA
+00G000000000002AAA
+00G000000000010AAA
+00G000000000011AAA
+00G000000000012AAA
+00G000000000013AAA
+00G000000000020AAA
+00G000000000021AAA
+00G000000000022AAA
+005000000000001AAA
+005000000000002AAA
+owner@example.invalid
+nsupport@example.invalid
+# The same synthetic signature address, quoted by the models in the committed
+# eval results (test/fixtures/grounding-eval-results-*.json). RFC 2606 .invalid TLD.
+support@example.invalid
+
+# === JavaScript globals that happen to match the Salesforce id shape ===
+# "URLSearchParams" is 15 alphanumerics starting with an uppercase prefix, which
+# the SF_ID regex cannot tell from an id. It is a web platform API name.
+URLSearchParams
+
+# === Placeholder My Domain in the homepage's browser mockup ===
+# The site's hero draws a Chrome address bar. "yourorg" is the generic
+# placeholder Salesforce itself uses in documentation, not a real tenant;
+# the mockup shows the demo flow and never a real org.
+yourorg.lightning.force.com
+
+# === The product's own public support address ===
+# support@getflowcompanion.com is the mailbox published deliberately in the
+# privacy policy, the site footer, SECURITY.md, and the Web Store listing. The
+# scanner flags every address it sees, which is correct; this one is a business
+# contact for a product we own, on a domain we own, not personal data about a
+# person. It is the address the store form requires. Reviewed 2026-09-11.
+support@getflowcompanion.com
+
+# === The author's GitHub noreply address (2026-09-17) ===
+# A public alias GitHub assigns to the account; it delivers nowhere and is what
+# every commit in both repositories is authored as. Named in the publish script.
+johncharlesworth@users.noreply.github.com

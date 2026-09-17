@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 9 * * 1' # Mondays: do the provider links still answer?
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extension:
+    name: lint · typecheck · test · PII scan · build · size · e2e
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: extension/.nvmrc
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - run: npm ci
+
+      # Invariant 7: the PII scanner runs on every commit and in CI, over every
+      # tracked file, not just the ones a commit touched.
+      - name: PII scan
+        working-directory: .
+        run: git ls-files -z | xargs -0 bash scripts/scan-for-pii.sh
+
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run size
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+
+      - name: Upload e2e results on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-results
+          path: extension/test-results/
+          if-no-files-found: ignore
+
+  # A provider can move its key or pricing page at any time. Weekly, and on demand.
+  links:
+    name: provider links still answer
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: extension/.nvmrc
+      - run: npm run links
