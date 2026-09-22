@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, CircuitBoard, ExternalLink, Eye, EyeOff, Gem, type LucideIcon, Sparkles } from 'lucide-react';
+import { Aperture, ArrowLeft, ChevronRight, ExternalLink, Eye, EyeOff, Gem, type LucideIcon, Sparkle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 
@@ -8,7 +8,7 @@ import { keyFormatHint, keyStatusLine, type KeyLineState } from '@/lib/key-copy'
 import { validateKeyFormat } from '@/lib/key-format';
 import { getProviderKey, moveProviderKeys, removeAllProviderKeys, setProviderKey } from '@/lib/key-storage';
 import { buildPicker, defaultModel, findSpec, type ProviderId, PROVIDERS, providerName } from '@/lib/models';
-import { CARD_TITLE, disclosureFor, GET_KEY_URL, GOOGLE_FREE_TIER_NOTE, SUBSCRIPTION_NOTE, WHAT_IS_SENT_URL } from '@/lib/provider-links';
+import { CARD_TITLE, disclosureFor, DOCS_URL, GET_KEY_URL, GOOGLE_FREE_TIER_NOTE, ISSUES_URL, SUBSCRIPTION_NOTE, WHAT_IS_SENT_URL } from '@/lib/provider-links';
 import { CUSTOM_INSTRUCTIONS_MAX, keyStorageMode, last4 } from '@/lib/settings';
 import type { ThemeSetting } from '@/lib/theme';
 import { validateKey } from '@/lib/validate-key';
@@ -20,7 +20,9 @@ import { Checkbox } from './ui/checkbox';
 import { RadioGroup } from './ui/radio-group';
 import { Textarea } from './ui/textarea';
 
-const MARK: Record<ProviderId, LucideIcon> = { anthropic: Sparkles, openai: CircuitBoard, google: Gem };
+// Stand-ins from the icon set, not the providers' own marks: each nods at the
+// real one (a spark, interlocking blades, a gem) without using it.
+const MARK: Record<ProviderId, LucideIcon> = { anthropic: Sparkle, openai: Aperture, google: Gem };
 
 export interface SettingsViewProps {
   onBack: () => void;
@@ -29,7 +31,7 @@ export interface SettingsViewProps {
   onStartChatting?: () => void;
   /** For "too small for this flow" in the model menu. */
   flowTokens?: number | null;
-  /** Rendered inside the demo tab: "Try the demo" is hidden. */
+  /** Rendered inside the demo tab: the links to the demo flow are hidden. */
   demo?: boolean;
   /** Injected in tests. */
   validate?: typeof validateKey;
@@ -107,6 +109,14 @@ export function SettingsView({ onBack, firstRun = false, onStartChatting, flowTo
             AI provider
           </h2>
           <p className="mb-2 px-2 text-xs text-text-3">{SUBSCRIPTION_NOTE}</p>
+          {firstRun && !demo && (
+            <p className="mb-2 px-2 text-xs text-text-3">
+              Not ready for a key?{' '}
+              <a href={DEMO_PATH} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent">
+                See it on a demo flow first <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </a>
+            </p>
+          )}
           <div className="flex flex-col gap-1">
             {PROVIDERS.map((provider) => (
               <ProviderCard
@@ -191,7 +201,7 @@ export function SettingsView({ onBack, firstRun = false, onStartChatting, flowTo
                   rows={3}
                   maxLength={CUSTOM_INSTRUCTIONS_MAX}
                   defaultValue={settings.customInstructions}
-                  placeholder="“I’m a junior admin, define jargon.” · “Answer in Portuguese.” · “Always list DML by object.”"
+                  placeholder="“I’m new to Flow. Define any jargon.” · “Use field labels, not API names.” · “Answer in Portuguese.”"
                   onBlur={(e) => {
                     const value = e.target.value.slice(0, CUSTOM_INSTRUCTIONS_MAX);
                     if (value === settings.customInstructions) return;
@@ -241,9 +251,17 @@ export function SettingsView({ onBack, firstRun = false, onStartChatting, flowTo
             <section className="flex flex-col items-start gap-3 px-2">
               {!demo && (
                 <a href={DEMO_PATH} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[14px] text-accent">
-                  Try the demo <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  Try a demo flow <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
               )}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px]">
+                <a href={DOCS_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent">
+                  Docs <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+                <a href={ISSUES_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent">
+                  Bugs and ideas <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+              </div>
               {confirmForget ? (
                 <div className="rounded-composer bg-surface p-3">
                   <p className="text-[14px] text-text-1">This removes your keys, settings, and every chat from this computer.</p>

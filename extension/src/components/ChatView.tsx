@@ -1,16 +1,18 @@
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import recordedWith from '@@/test/fixtures/synthetic-demo-recorded-with.json';
 import type { ActiveFlow } from '@/hooks/useActiveFlow';
 import { useChatStream } from '@/hooks/useChatStream';
 import { BILLING_URL, type ChatErrorAction, RATE_LIMIT_URL } from '@/lib/chat-errors';
 import { downloadFilename, downloadTextFile } from '@/lib/download';
 import { buildOutline, focusElementFor, type OutlineItem, summaryLine } from '@/lib/flow-outline';
 import { hoverRows, hoverSummary, sizeWord as sizeWordFor } from '@/lib/flow-size';
-import { buildPicker, findSpec, providerName } from '@/lib/models';
+import { buildPicker, findSpec, type ProviderId, providerName } from '@/lib/models';
 import { type ChatMode, type DrawVariant, type FocusElement, STARTER_QUESTIONS } from '@/lib/modes';
 import type { Settings } from '@/lib/settings';
 
+import { Chip } from './Chip';
 import { Composer } from './Composer';
 import { ElementList } from './ElementList';
 import { Header, type HeaderFlow } from './Header';
@@ -29,7 +31,32 @@ export const ACTION_COPY = {
   drawFrom: (name: string) => ({ title: `Draw ${name}`, body: 'That element, what leads into it, and where each outcome goes.' }),
 } as const;
 export const OUTLINE_HINT = 'See every element in this flow. Pick one to ask about it, or draw a flowchart.';
+/** The same outline in the demo flow, where a pick plays the element's recorded answer. */
+export const RECORDED_OUTLINE_HINT = 'Pick one to see it explained.';
 export const NEW_CHAT_CONFIRM = 'Start a new chat? This conversation will be cleared.';
+/**
+ * The demo flow: what is on screen and where the answers came from. The same
+ * two sentences with or without a key; the message box's placeholder is what
+ * names the next step. The first sentence is set in semibold.
+ */
+export const RECORDED_BANNER = {
+  lead: 'This is a demo flow.',
+  rest: (modelLabel: string) => `The four actions below play real answers, recorded from ${modelLabel}.`,
+} as const;
+/** The banner's element id: the disabled message box points at it, so the reason it is off is read out. */
+export const SAMPLE_FLOW_BANNER_ID = 'sample-flow-banner';
+export const RECORDED_HEADING = 'Try one of the four';
+/**
+ * Once the demo flow has an answer, the cards are gone and the message box is
+ * off, so the four actions stay in sight as a row of chips over the message box.
+ */
+export const TRY_ANOTHER = { label: 'Try another:', group: 'Try another action' } as const;
+const RECORDED_ACTIONS: { mode: Exclude<ChatMode, 'ask'>; icon: LucideIcon }[] = [
+  { mode: 'overview', icon: Sparkles },
+  { mode: 'explain', icon: ListTree },
+  { mode: 'document', icon: FileText },
+  { mode: 'draw', icon: Waypoints },
+];
 
 export interface ChatViewProps {
   flow: ActiveFlow;
@@ -40,11 +67,25 @@ export interface ChatViewProps {
   onUpdateSettings: (apply: (s: Settings) => Settings) => Promise<unknown>;
   onOpenSettings: () => void;
   now?: number;
+  /**
+   * The demo flow. The four actions play answers that were recorded from a
+   * real model; nothing is sent, so everything that would need a request
+   * (typed questions, other drawings, the model menu, the gauge) is off or hidden.
+   */
+  recorded?: boolean;
+  /**
+   * Whether a working key exists. In recorded mode it decides the message
+   * box's placeholder (get a key, or open a real flow) and whether the
+   * "Set up your AI" link is shown; the banner and the recording are the same
+   * either way.
+   */
+  keyReady?: boolean;
 }
 
-export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpdateSettings, onOpenSettings, now }: ChatViewProps) {
-  const chat = useChatStream({ flow, settings });
-  const provider = settings.activeProvider ?? 'anthropic';
+export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpdateSettings, onOpenSettings, now, recorded = false, keyReady = false }: ChatViewProps) {
+  const chat = useChatStream({ flow, settings, recorded });
+  // Recorded answers name the provider and model they came from, whatever the settings say.
+  const provider = recorded ? (recordedWith.provider as ProviderId) : (settings.activeProvider ?? 'anthropic');
   const modelId = settings.modelByProvider[provider];
   const outline = useMemo(() => buildOutline(flow.metadata), [flow.metadata]);
   const [element, setElement] = useState<OutlineItem | null>(null);
@@ -66,14 +107,13 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
   const name = providerName(provider);
   const picker = useMemo(() => buildPicker(provider, settings.keys[provider].models, chat.flowMeasure?.tokens ?? null), [provider, settings.keys, chat.flowMeasure]);
   const currentItem = [...picker.recommended, ...picker.more].find((m) => m.id === modelId);
-  const modelLabel = currentItem?.label ?? findSpec(provider, modelId)?.label ?? modelId;
+  const modelLabel = recorded ? recordedWith.modelLabel : (currentItem?.label ?? findSpec(provider, modelId)?.label ?? modelId);
   const modelMissing = picker.recommended.length + picker.more.length > 0 && !currentItem;
-  const detailSuffix = settings.detail === 'balanced' ? '' : settings.detail === 'concise' ? ' · Concise' : ' · Thorough';
 
-  // The flow chip's one sentence: the consequence, never the mechanism; no size words anywhere in the UI.
+  // The gauge's one sentence: the consequence, never the mechanism; no size words anywhere in the UI. (The demo flow has no gauge.)
   const chipStory = chat.lastReused
-    ? 'Follow-ups in this chat reuse the flow, so they’re quicker and cheaper than the first question.'
-    : `Your first question sends the whole flow to ${name}. Follow-ups in this chat reuse it, so they’re quicker and cheaper.`;
+    ? 'Follow-ups in this chat are cached and reuse the flow from memory.'
+    : `Your first question sends the whole flow to ${name}. Follow-ups in this chat are cached and reuse it from memory.`;
   const chipSummary = chat.lastUsage ? hoverSummary(chat.lastUsage, provider) : null;
   // The card shows the same three rows before the first answer, at zero, so its shape is learned once.
   const chipRows = hoverRows(chat.lastUsage ?? { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 }, provider);
@@ -120,7 +160,8 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
     else if (action === 'switchModel' && suggested) blocked?.onSwitch?.();
   };
 
-  const modelChip = (
+  // No model chip in the demo flow: the banner already names the model the answers came from.
+  const modelChip = recorded ? undefined : (
     <ModelMenu
       provider={provider}
       picker={picker}
@@ -134,9 +175,10 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
       }}
       onManageProviders={onOpenSettings}
       trigger={
-        <button type="button" className={`inline-flex h-8 items-center gap-1 rounded-pill px-2 text-xs ${modelMissing ? 'text-warning' : 'text-text-2'} hover:bg-accent-subtle`}>
-          {modelMissing ? 'Choose a model' : `${modelLabel}${detailSuffix}`}
-          <ChevronDown className="h-3 w-3" aria-hidden="true" />
+        <button type="button" className={`inline-flex h-8 min-w-0 items-center gap-1 rounded-pill px-2 text-[13px] ${modelMissing ? 'text-warning' : 'text-text-2'} hover:bg-accent-subtle`}>
+          {/* One line always: on the narrowest panel a long label ends in an ellipsis rather than wrapping under itself. */}
+          <span className="truncate">{modelMissing ? 'Choose a model' : modelLabel}</span>
+          <ChevronDown className="h-3 w-3 shrink-0" aria-hidden="true" />
         </button>
       }
     />
@@ -145,6 +187,11 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
   return (
     <div className="@container flex h-full flex-col">
       <Header flow={header} refreshing={refreshing} onNewChat={requestNewChat} onRefresh={onRefresh} onDownloadJson={() => downloadTextFile(downloadFilename(header.label, header.version, 'json'), JSON.stringify(flow.metadata, null, 2))} onOpenSettings={onOpenSettings} now={now} />
+      {recorded && (
+        <p id={SAMPLE_FLOW_BANNER_ID} className="mx-3 mb-2 shrink-0 rounded-composer bg-accent-subtle px-3 py-2 text-[13px] leading-[1.45] text-text-1" role="status">
+          <span className="font-semibold">{RECORDED_BANNER.lead}</span> {RECORDED_BANNER.rest(modelLabel)}
+        </p>
+      )}
       {picking ? (
         <div
           role="presentation"
@@ -164,6 +211,8 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
             focusSearch
             onSelect={(item) => {
               if (picking === 'draw') send('draw', '', 'fromElement', focusFor(item));
+              // With the message box off there is no Enter to press: picking an element plays its answer.
+              else if (recorded) send('explain', '', undefined, focusFor(item));
               else setElement(item);
               setPicking(null);
             }}
@@ -172,8 +221,8 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
       ) : chat.turns.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="flex flex-col items-center gap-4 px-6 pt-10 text-center">
-            <p className="text-[15px] text-text-1">Ready. Ask anything about this flow.</p>
-            {large && <p className="max-w-[40ch] text-xs text-text-3">{`Your first question sends the whole flow to ${name}. Follow-ups in this chat reuse it, so they’re quicker and cheaper.`}</p>}
+            <p className="text-[15px] text-text-1">{recorded ? RECORDED_HEADING : 'Ready. Ask anything about this flow.'}</p>
+            {large && <p className="max-w-[40ch] text-xs text-text-3">{`Your first question sends the whole flow to ${name}. Follow-ups in this chat are cached and reuse it from memory.`}</p>}
             {/* Chrome opens side panels narrow and remembers a dragged width; one nudge, narrow panels only, until the first message ever sent. */}
             {!settings.resizeTipDone && <p className="hidden max-w-[40ch] text-xs text-text-3 @max-[399px]:block">{RESIZE_TIP}</p>}
             <div className="grid w-full max-w-[560px] gap-2 text-left @min-[480px]:grid-cols-2">
@@ -184,31 +233,37 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
             </div>
           </div>
           <div className="mx-3 mt-6">
-            <button type="button" aria-expanded={questionsOpen} onClick={() => setQuestionsOpen((v) => !v)} className="flex w-full items-center gap-1 rounded-button px-2 py-1.5 text-left text-[14px] text-text-2 hover:bg-accent-subtle">
-              <ChevronDown className={`h-4 w-4 transition-transform ${questionsOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
-              <span className="flex-1">Questions to try</span>
-            </button>
-            {questionsOpen && (
-              <ul className="mb-2 mt-1 flex flex-col">
-                {STARTER_QUESTIONS.map((q) => (
-                  <li key={q}>
-                    <button type="button" onClick={() => send('ask', q)} className="flex w-full items-center gap-2 rounded-button px-2 py-1.5 text-left text-[14px] text-text-1 hover:bg-accent-subtle">
-                      <MessageSquareText className="h-4 w-4 shrink-0 text-text-3" aria-hidden="true" />
-                      {q}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            {/* Typed questions lead to the message box, which is off in the demo flow. */}
+            {!recorded && (
+              <>
+                <button type="button" aria-expanded={questionsOpen} onClick={() => setQuestionsOpen((v) => !v)} className="flex w-full items-center gap-1 rounded-button px-2 py-1.5 text-left text-[14px] text-text-2 hover:bg-accent-subtle">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${questionsOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
+                  <span className="flex-1">Questions to try</span>
+                </button>
+                {questionsOpen && (
+                  <ul className="mb-2 mt-1 flex flex-col">
+                    {STARTER_QUESTIONS.map((q) => (
+                      <li key={q}>
+                        <button type="button" onClick={() => send('ask', q)} className="flex w-full items-center gap-2 rounded-button px-2 py-1.5 text-left text-[14px] text-text-1 hover:bg-accent-subtle">
+                          <MessageSquareText className="h-4 w-4 shrink-0 text-text-3" aria-hidden="true" />
+                          {q}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
-            <button type="button" aria-expanded={outlineOpen} onClick={() => setOutlineOpen((v) => !v)} className="flex w-full items-center gap-1 rounded-button px-2 py-1.5 text-left text-[14px] text-text-2 hover:bg-accent-subtle">
-              <ChevronDown className={`h-4 w-4 transition-transform ${outlineOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
-              <span className="flex-1">Outline</span>
-              <span className="text-xs text-text-3">{summaryLine(outline)}</span>
+            <button type="button" aria-expanded={outlineOpen} onClick={() => setOutlineOpen((v) => !v)} className="inline-flex max-w-full items-center gap-1 rounded-button px-2 py-1.5 text-left text-[14px] text-text-2 hover:bg-accent-subtle">
+              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${outlineOpen ? '' : '-rotate-90'}`} aria-hidden="true" />
+              <span>Outline</span>
+              <span className="truncate text-xs text-text-3">· {summaryLine(outline)}</span>
             </button>
-            {!outlineOpen && <p className="px-2 pt-1 text-xs text-text-3">{OUTLINE_HINT}</p>}
+            {!outlineOpen && <p className="px-2 pt-1 text-xs text-text-3">{recorded ? RECORDED_OUTLINE_HINT : OUTLINE_HINT}</p>}
             {outlineOpen && (
               <div className="mt-1 max-h-[50vh]">
-                <ElementList outline={outline} onSelect={(item) => setElement(item)} />
+                {/* Live, a pick attaches the element to the message box. With the box off there is no Enter to press, so a pick plays the element's recorded answer. */}
+                <ElementList outline={outline} onSelect={(item) => (recorded ? send('explain', '', undefined, focusFor(item)) : setElement(item))} />
               </div>
             )}
           </div>
@@ -225,7 +280,7 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
           onErrorAction={onErrorAction}
           onDownloadDocument={(markdown) => downloadTextFile(downloadFilename(header.label, header.version, 'md'), markdown, 'text/markdown')}
           onRedo={() => void chat.redo()}
-          onDrawFollowUp={onDrawFollowUp}
+          onDrawFollowUp={recorded ? undefined : onDrawFollowUp}
           flowMetadata={flow.metadata}
         />
       )}
@@ -243,6 +298,17 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
           <Button variant="ghost" onClick={() => setConfirmNewChat(false)}>
             Keep
           </Button>
+        </div>
+      )}
+      {recorded && !picking && chat.turns.length > 0 && (
+        <div role="group" aria-label={TRY_ANOTHER.group} className="mx-3 mb-2 flex shrink-0 flex-wrap items-center gap-2">
+          <span className="text-xs text-text-3">{TRY_ANOTHER.label}</span>
+          {RECORDED_ACTIONS.map(({ mode, icon: Icon }) => (
+            // Every chip starts an answer, so the row waits while one plays.
+            <Chip key={mode} icon={<Icon className="h-4 w-4 text-accent" aria-hidden="true" />} disabled={chat.status !== 'idle'} onClick={() => onQuickAction(mode)}>
+              {ACTION_COPY[mode].title}
+            </Chip>
+          ))}
         </div>
       )}
       <Composer
@@ -264,6 +330,7 @@ export function ChatView({ flow, header, refreshing, onRefresh, settings, onUpda
         nudge={chat.nudge}
         onNewChat={() => void chat.newChat()}
         onDismissNudge={chat.dismissNudge}
+        recorded={recorded ? { keyReady, onSetUp: onOpenSettings, describedBy: SAMPLE_FLOW_BANNER_ID } : null}
       />
     </div>
   );

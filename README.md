@@ -14,10 +14,11 @@ Website and documentation: [getflowcompanion.com](https://getflowcompanion.com) 
 - **Overview** — a fixed-shape summary: purpose, trigger and entry criteria, main paths by outcome, data written by object, external calls, worth knowing.
 - **Explain an element** — pick any element from the searchable outline and get its inputs, logic quoted verbatim, outcomes, and fault path.
 - **Document this flow** — a full document with resource tables, a walkthrough in execution order, a decision matrix, and data operations, with Copy and Download.
-- **Draw this flow** — one flowchart of the main paths, drawn for business readers, with Open in Excalidraw to edit it. Draw every element by name, or draw from one element onward.
-- **Your own instructions** — "I'm a junior admin, define jargon", "Answer in Portuguese", plus a Concise / Balanced / Thorough setting.
+- **Draw this flow** — one flowchart of the main paths, drawn for business readers, with Open in Excalidraw to edit it. Draw every element by name, or draw the picture around one element.
+- **Your own instructions** — "I'm new to Flow. Define any jargon", "Use field labels, not API names", "Answer in Portuguese", plus a Concise / Balanced / Thorough setting.
 - **Your choice of model** — every model your key can use, with recommended defaults per provider. Switch mid-chat.
 - **History per flow** on this computer, kept across tab switches and new versions. New chat clears it.
+- **A demo flow to try first**, from the first screen, with no key and no org: the four actions play real answers recorded from Claude Sonnet 5, and nothing is sent anywhere.
 
 Answers are grounded in the flow's metadata. The flow's JSON is treated as untrusted data: text inside a flow cannot change how the assistant behaves, and a grounding eval with prompt-injection fixtures (`extension/eval/`) runs on any change to the prompt, the models, or the adapters.
 
@@ -47,7 +48,7 @@ When you ask a question, exactly two things go to the AI provider you chose, und
 
 ## Documented limitations
 
-Orgs with API Access Control, and orgs behind Microsoft Defender for Cloud Apps (MCAS), are not supported. The extension reads the last **saved** version, so save before you ask about a change. A flow larger than the chosen model's window is stopped before sending, with a one-click switch to a model that fits. A new API key can start on a small allowance, so a large flow or a quick run of questions may be refused at first; the error says what to do. Firefox is not supported. Two Chrome windows on the same flow share one chat history. Draw this flow draws only this flow: approval processes, other flows, and anything else outside its saved definition are not in the picture, because they are not in the data.
+Orgs with API Access Control, and orgs behind Microsoft Defender for Cloud Apps (MCAS), are not supported. The extension reads the last **saved** version, so save before you ask about a change. A flow larger than the chosen model's window is stopped before sending, with a one-click switch to a model that fits. Your provider's rate limits apply; if a request is refused, the error says what to do. Firefox is not supported. Two Chrome windows on the same flow share one chat history. Draw this flow draws only this flow: approval processes, other flows, and anything else outside its saved definition are not in the picture, because they are not in the data.
 
 The extension does not lint or fix flows. For rules-based checks, use Lightning Flow Scanner.
 
@@ -67,6 +68,6 @@ and load `extension/.output/chrome-mv3/` as an unpacked extension from `chrome:/
 
 This repository holds the extension's source, its tests, its grounding eval, and its CI. This repository receives a snapshot at each release, so it carries no day-to-day history. Issues and pull requests are welcome here; see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`SECURITY.md`](./SECURITY.md).
 
-Open source under the GPL-3.0 licence. See [`LICENSE`](./LICENSE); the name and mark are not part of the licence, see [`TRADEMARKS.md`](./TRADEMARKS.md).
+Copyright (C) 2026 Charlesworth Holdings LLC. Open source under the GPL-3.0 licence. See [`LICENSE`](./LICENSE); the name and mark are not part of the licence, see [`TRADEMARKS.md`](./TRADEMARKS.md).
 
 Salesforce and Flow Builder are trademarks of Salesforce, Inc. Flow Companion is an independent product and is not affiliated with or endorsed by Salesforce.

@@ -1,5 +1,5 @@
 // The streaming hook: AbortController, busy guard,
-// context stop, incremental persistence, and the interruption contract from
+// context stop, incremental persistence, and the interruption contract:
 // Stop keeps the partial answer labelled "Stopped", saved, with no Retry.
 // An error keeps any partial, labelled, with Retry. Retry removes the
 // interrupted answer, keeps the same question, and re-sends. Nothing here
@@ -12,9 +12,16 @@
 // that mounts on the same chat re-attaches to it through storage changes.
 // Only closing the panel or the window ends a run early, and that still
 // leaves a labelled partial with Retry.
+//
+// Recorded mode (the demo flow, key or no key): the answers come
+// from a bundled recording instead of a provider. No key is read, the flow is
+// not measured, nothing is sent, and the chat is stored under a key of its own,
+// so a recorded turn can never reach a real provider as history. Stop, Try
+// again and New chat work as they do for a live answer.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import recordedWith from '@@/test/fixtures/synthetic-demo-recorded-with.json';
 import type { ActiveFlow } from '@/hooks/useActiveFlow';
 import { browser } from 'wxt/browser';
 
@@ -23,9 +30,10 @@ import { type ContextGateResult, shouldBlockSend } from '@/lib/context-gate';
 import { wrapFlowJson } from '@/lib/flow-wrapper';
 import { createFlowMeasurer, estimateTokens, type FlowMeasure, isChatGettingLong, reusedFlow, type UsageReport } from '@/lib/flow-size';
 import { getProviderKey } from '@/lib/key-storage';
-import { buildPicker, effortFor, findSpec, UNKNOWN_MODEL_INPUT_TOKENS } from '@/lib/models';
+import { buildPicker, effortFor, findSpec, type ProviderId, UNKNOWN_MODEL_INPUT_TOKENS } from '@/lib/models';
 import { assembleUserTurn, capEffortForMode, type ChatMode, type DrawVariant, type FocusElement, maxOutputTokensFor } from '@/lib/modes';
 import { providerFor } from '@/lib/providers';
+import { recordedProvider } from '@/lib/providers/recorded';
 import type { ChatError, ChatMessage, LLMProvider, Usage } from '@/lib/providers/types';
 import { keyStorageMode, type Settings } from '@/lib/settings';
 import { loadSystemPrompt } from '@/lib/system-prompt';
@@ -49,6 +57,8 @@ export interface SendArgs {
 export interface UseChatStreamArgs {
   flow: ActiveFlow;
   settings: Settings;
+  /** Play the bundled recorded answers instead of asking a provider: no key, no request. */
+  recorded?: boolean;
   /** Injected in tests. */
   makeProvider?: typeof providerFor;
   measurer?: ReturnType<typeof createFlowMeasurer>;
@@ -79,6 +89,9 @@ export interface UseChatStreamResult {
 }
 
 const SYSTEM = loadSystemPrompt();
+/** The provider and model the bundled answers were recorded with; recorded mode names these, whatever the settings say. */
+const RECORDED_PROVIDER = recordedWith.provider as ProviderId;
+const RECORDED_MODEL: string = recordedWith.model;
 const NEXT_TURN_ESTIMATE = 2_000;
 /** The abort reason for New chat: the run ends and writes nothing more, so the cleared chat stays cleared. */
 const CLEARED = new DOMException('Chat cleared', 'AbortError');
@@ -131,8 +144,8 @@ function toMessages(turns: ChatTurn[]): ChatMessage[] {
   return out.filter((m, i) => !(m.role === 'user' && out[i + 1]?.role === 'user'));
 }
 
-export function useChatStream({ flow, settings, makeProvider = providerFor, measurer }: UseChatStreamArgs): UseChatStreamResult {
-  const key = chatKey(flow.orgId, flow.loaded.record.DefinitionId);
+export function useChatStream({ flow, settings, recorded = false, makeProvider = providerFor, measurer }: UseChatStreamArgs): UseChatStreamResult {
+  const key = chatKey(recorded ? `${flow.orgId}-recorded` : flow.orgId, flow.loaded.record.DefinitionId);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [status, setStatus] = useState<ChatStatus>('idle');
   const [flowMeasure, setFlowMeasure] = useState<FlowMeasure | null>(null);
@@ -144,10 +157,12 @@ export function useChatStream({ flow, settings, makeProvider = providerFor, meas
   const measureRef = useRef(measurer ?? createFlowMeasurer());
   const versionRef = useRef({ key, id: flow.loaded.record.Id });
   const keyRef = useRef(key);
+  /** Settles when the stored chat for the current key is on screen. */
+  const hydratedRef = useRef<Promise<void>>(Promise.resolve());
 
   const wrappedFlow = useMemo(() => wrapFlowJson(JSON.stringify(flow.metadata)), [flow.metadata]);
-  const provider = settings.activeProvider;
-  const modelId = provider ? settings.modelByProvider[provider] : null;
+  const provider = recorded ? RECORDED_PROVIDER : settings.activeProvider;
+  const modelId = recorded ? RECORDED_MODEL : provider ? settings.modelByProvider[provider] : null;
   const storageMode = keyStorageMode(settings);
 
   const commit = useCallback((next: ChatTurn[]) => {
@@ -161,7 +176,7 @@ export function useChatStream({ flow, settings, makeProvider = providerFor, meas
     let live = true;
     keyRef.current = key;
     const attached = liveRuns.get(key);
-    void getChat(key).then((chat) => {
+    hydratedRef.current = getChat(key).then((chat) => {
       if (!live) return;
       commit(fromStored(chat));
       setBlocked(null);
@@ -211,8 +226,9 @@ export function useChatStream({ flow, settings, makeProvider = providerFor, meas
   }, [key, flow.loaded.record, commit]);
 
   // Measure the flow once per version (count endpoint when the provider has one).
+  // Never in recorded mode: the count is a request, and it reads the key.
   useEffect(() => {
-    if (!provider || !modelId) return;
+    if (recorded || !provider || !modelId) return;
     let live = true;
     const controller = new AbortController();
     void (async () => {
@@ -228,7 +244,7 @@ export function useChatStream({ flow, settings, makeProvider = providerFor, meas
       live = false;
       controller.abort();
     };
-  }, [provider, modelId, wrappedFlow, flow.loaded.record.Id, storageMode]);
+  }, [recorded, provider, modelId, wrappedFlow, flow.loaded.record.Id, storageMode]);
 
   // The hard stop is decided before the user tries to send:
   // whenever the flow's measure, the model, or the transcript changes.
@@ -278,30 +294,37 @@ export function useChatStream({ flow, settings, makeProvider = providerFor, meas
       const messages = [...history, { role: 'user' as const, content: userTurn.sentText ?? userTurn.displayText }];
       const flowTokens = flowMeasure?.tokens ?? estimateTokens(SYSTEM + wrappedFlow, provider);
       const transcriptTokens = history.reduce((sum, m) => sum + estimateTokens(m.content, provider), 0);
-      const gate = shouldBlockSend({
-        maxInputTokens,
-        systemTokens: 0, // counted inside flowTokens (the measure covers system + flow)
-        flowTokens,
-        transcriptTokens,
-        assembledTurnTokens: estimateTokens(messages[messages.length - 1]!.content, provider),
-        maxOutputTokens,
-        currentModelId: modelId,
-        candidates: [...picker.recommended, ...picker.more].map((m) => ({ id: m.id, label: m.label, maxInputTokens: m.maxInputTokens })),
-      });
-      if (!gate.ok) {
-        setBlocked(gate);
-        return;
+      // A recording always fits: nothing is sent, so the context stop has nothing to decide.
+      if (!recorded) {
+        const gate = shouldBlockSend({
+          maxInputTokens,
+          systemTokens: 0, // counted inside flowTokens (the measure covers system + flow)
+          flowTokens,
+          transcriptTokens,
+          assembledTurnTokens: estimateTokens(messages[messages.length - 1]!.content, provider),
+          maxOutputTokens,
+          currentModelId: modelId,
+          candidates: [...picker.recommended, ...picker.more].map((m) => ({ id: m.id, label: m.label, maxInputTokens: m.maxInputTokens })),
+        });
+        if (!gate.ok) {
+          setBlocked(gate);
+          return;
+        }
       }
       setBlocked(null);
 
-      const apiKey = await getProviderKey(provider, storageMode);
+      // A live send reads the key first, and by then the stored chat has loaded.
+      // A recording reads no key, so it waits for the chat itself: a turn that
+      // started sooner would be wiped when the stored chat arrived.
+      if (recorded) await hydratedRef.current.catch(() => undefined);
+      const apiKey = recorded ? '' : await getProviderKey(provider, storageMode);
       const assistant: ChatTurn = { id: nextId(), role: 'assistant', displayText: '', interrupted: 'error', timestamp: Date.now() };
       const base = [...turnsRef.current, userTurn, assistant];
       commit(base);
       persist(base, true);
       setStatus('waiting');
 
-      if (!apiKey) {
+      if (apiKey === null || (!apiKey && !recorded)) {
         const failed = base.map((t) => (t.id === assistant.id ? { ...t, error: { class: 'keyRejected' as const } } : t));
         commit(failed);
         persist(failed, true);
@@ -318,7 +341,7 @@ export function useChatStream({ flow, settings, makeProvider = providerFor, meas
         if (liveRuns.get(runKey) === liveRun) liveRuns.delete(runKey);
         settle();
       };
-      const llm: LLMProvider = makeProvider(provider);
+      const llm: LLMProvider = recorded ? recordedProvider({ mode, variant: userTurn.variant, focusElement: userTurn.focusElement }) : makeProvider(provider);
       let text = '';
       let usage: Usage | null = null;
       let outcome: 'end' | 'max_tokens' | 'refusal' | 'error' | 'stopped' = 'error';
@@ -396,7 +419,7 @@ export function useChatStream({ flow, settings, makeProvider = providerFor, meas
       finishRun();
       setStatus('idle');
     },
-    [key, provider, modelId, settings, storageMode, flowMeasure, wrappedFlow, makeProvider, commit, persist],
+    [key, recorded, provider, modelId, settings, storageMode, flowMeasure, wrappedFlow, makeProvider, commit, persist],
   );
 
   const send = useCallback(

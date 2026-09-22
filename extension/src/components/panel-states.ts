@@ -3,6 +3,7 @@
 import { Compass, KeyRound, LogIn, Save, ShieldAlert, WifiOff, Workflow } from 'lucide-react';
 
 import type { ActiveFlowState } from '@/hooks/useActiveFlow';
+import { DEMO_PATH } from '@/lib/demo-flow';
 import { type ExcalidrawRoute, excalidrawPendingNote } from '@/lib/excalidraw-export';
 import type { SfErrorKind } from '@/lib/sf-error-kind';
 
@@ -17,14 +18,23 @@ export type SetUpVariant = 'first' | 'forgotten' | 'unchecked';
  * The gate state. `first`: no key yet. `forgotten`: the key was not remembered
  * and Chrome restarted. `unchecked`: a key is saved but its check never
  * completed, so the user needs to check it again rather than paste it again.
+ * Only `first` offers the demo flow: someone who has never had a key can see
+ * the product before getting one, while the other two have one thing to do.
  */
-export function setUpAiState(variant: SetUpVariant, onSetUp: () => void, providerLabel = 'your provider'): PanelStateProps {
+/**
+ * `excalidrawPending`: the panel follows the tab, so right after Open in
+ * Excalidraw from the demo flow with no key it lands here rather than on
+ * "Not on Salesforce"; the paste note takes the disclosure's place until the
+ * export is done with.
+ */
+export function setUpAiState(variant: SetUpVariant, onSetUp: () => void, providerLabel = 'your provider', excalidrawPending: ExcalidrawRoute | null = null): PanelStateProps {
+  const note = excalidrawPending ? excalidrawPendingNote(excalidrawPending) : DISCLOSURE_GENERIC;
   if (variant === 'unchecked') {
     return {
       icon: KeyRound,
       title: 'Check your key',
       body: `Your key is saved, but ${providerLabel} couldn’t be reached to check it. Open Settings and check again.`,
-      note: DISCLOSURE_GENERIC,
+      note,
       action: { label: 'Open Settings', onClick: onSetUp },
     };
   }
@@ -34,9 +44,11 @@ export function setUpAiState(variant: SetUpVariant, onSetUp: () => void, provide
     body:
       variant === 'forgotten'
         ? 'Your key was forgotten when Chrome closed, as you chose. Paste it again to continue.'
-        : 'Flow Companion uses an AI account you own. Paste a key from Anthropic, OpenAI, or Google.',
-    note: DISCLOSURE_GENERIC,
+        : 'Flow Companion uses an API key from an AI account you own. When you chat, your flow’s saved metadata is sent to the AI provider you choose, under your key. Nothing else leaves your browser.',
+    // The first-run body carries the disclosure itself; the paste note still takes the slot while an export is pending.
+    ...(variant === 'first' && !excalidrawPending ? {} : { note }),
     action: { label: 'Set up your AI', onClick: onSetUp },
+    ...(variant === 'first' ? { link: { label: 'See it on a demo flow first', href: DEMO_PATH, note: 'No key needed. Opens in a new tab.' } } : {}),
   };
 }
 
@@ -87,7 +99,7 @@ const API_ERROR: Record<SfErrorKind, { title: string; body: string; retry: boole
  * The state component's props for a tab state, or null when the panel shows
  * something else (loading, a flow). `excalidrawPending`: the panel follows the
  * tab, so right after Open in Excalidraw it shows "Not on Salesforce" with the
- * paste instruction as its note.
+ * paste instruction as its note, in place of the demo-flow link.
  */
 export function describeState(state: ActiveFlowState, actions: { refresh: () => void; excalidrawPending?: ExcalidrawRoute | null }): PanelStateProps | null {
   switch (state.kind) {
@@ -99,7 +111,10 @@ export function describeState(state: ActiveFlowState, actions: { refresh: () => 
         icon: Compass,
         title: 'Not on Salesforce',
         body: 'Open a Salesforce org to get started, then open any Flow.',
-        ...(actions.excalidrawPending ? { note: excalidrawPendingNote(actions.excalidrawPending) } : {}),
+        // The paste instruction, while it shows, is the one thing to do here.
+        ...(actions.excalidrawPending
+          ? { note: excalidrawPendingNote(actions.excalidrawPending) }
+          : { link: { label: 'Try a demo flow', href: DEMO_PATH, note: 'Opens in a new tab.' } }),
       };
     case 'notOnFlowPage':
       return { icon: Workflow, title: 'Open a Flow', body: 'Go to Setup → Flows and open one. This panel follows the tab.' };

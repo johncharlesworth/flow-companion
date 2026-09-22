@@ -49,6 +49,28 @@ describe('SettingsView — AI provider', () => {
     expect(onStart).toHaveBeenCalled();
   });
 
+  it('first run offers the demo flow before any key, between the lead and the cards, in a new tab', async () => {
+    renderSettings({ firstRun: true });
+    const link = await screen.findByRole('link', { name: 'See it on a demo flow first' });
+    expect(link).toHaveAttribute('href', '/sidepanel.html?demo=1');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noreferrer');
+    expect(link.closest('p')).toHaveTextContent(/^Not ready for a key\? See it on a demo flow first$/);
+    const lead = screen.getByText(/^Pick the provider you have an account with/);
+    const firstCard = screen.getByText('Anthropic · Claude models');
+    expect(lead.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // First run has no bottom section, so this is the only way to the demo flow.
+    expect(screen.queryByRole('link', { name: 'Try a demo flow' })).not.toBeInTheDocument();
+  });
+
+  it('first run inside the demo tab does not offer the demo flow again', async () => {
+    renderSettings({ firstRun: true, demo: true });
+    expect(await screen.findByText('Anthropic · Claude models')).toBeInTheDocument();
+    expect(screen.queryByText(/Not ready for a key\?/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'See it on a demo flow first' })).not.toBeInTheDocument();
+  });
+
   it('opening a card only expands it; a provider becomes active when its key is accepted, or when its accepted key is chosen', async () => {
     const s = defaultSettings();
     await fakeBrowser.storage.local.set({ settings: { ...s, activeProvider: 'anthropic', keys: { ...s.keys, anthropic: { status: 'validated', last4: 'wxyz', models: [{ id: 'claude-sonnet-5' }], checkedAt: 1 } } } });
@@ -143,7 +165,7 @@ describe('SettingsView — AI provider', () => {
   it('shows the Google free-tier line only on the Google card, and every card carries the provider-named disclosure', async () => {
     renderSettings();
     await userEvent.click(await screen.findByText('Anthropic · Claude models'));
-    expect(screen.getByText(/is sent to Anthropic under your key/)).toBeInTheDocument();
+    expect(screen.getByText(/is sent to Anthropic under your key/)).toHaveTextContent('When you chat, this flow’s saved metadata — element names, formulas, and text — is sent to Anthropic under your key. What is sent?');
     expect(screen.queryByText(/free tier/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByText('Google · Gemini models'));
     expect(await screen.findByText(/On Google’s free tier/)).toBeInTheDocument();
@@ -163,11 +185,34 @@ describe('SettingsView — Answers, Appearance, Forget', () => {
     expect(screen.getByText(/Thorough answers take longer/)).toBeInTheDocument();
   });
 
-  it('offers "Try the demo" as a link to the panel in demo mode, in a new tab', async () => {
-    renderSettings();
-    const link = await screen.findByRole('link', { name: /Try the demo/ });
+  it('links to the docs and to the public repository’s issues at the bottom, in a new tab, inside the demo too', async () => {
+    const view = renderSettings();
+    const docs = await screen.findByRole('link', { name: 'Docs' });
+    expect(docs).toHaveAttribute('href', 'https://getflowcompanion.com/docs/');
+    expect(docs).toHaveAttribute('target', '_blank');
+    const issues = screen.getByRole('link', { name: 'Bugs and ideas' });
+    expect(issues).toHaveAttribute('href', 'https://github.com/johncharlesworth/flow-companion/issues');
+    expect(issues).toHaveAttribute('target', '_blank');
+    view.unmount();
+
+    renderSettings({ demo: true });
+    expect(await screen.findByRole('link', { name: 'Docs' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Bugs and ideas' })).toBeInTheDocument();
+  });
+
+  it('offers "Try a demo flow" as a link to the panel in demo mode, in a new tab, and not inside the demo itself', async () => {
+    const view = renderSettings();
+    const link = await screen.findByRole('link', { name: 'Try a demo flow' });
     expect(link).toHaveAttribute('href', '/sidepanel.html?demo=1');
     expect(link).toHaveAttribute('target', '_blank');
+    // The first-run line belongs to first run only.
+    expect(screen.queryByText(/Not ready for a key\?/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'See it on a demo flow first' })).not.toBeInTheDocument();
+    view.unmount();
+
+    renderSettings({ demo: true });
+    await screen.findByRole('heading', { name: 'Answers' });
+    expect(screen.queryByRole('link', { name: 'Try a demo flow' })).not.toBeInTheDocument();
   });
 
   it('Forget everything asks first, then clears keys, settings, and chats', async () => {

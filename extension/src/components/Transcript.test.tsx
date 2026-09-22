@@ -145,6 +145,15 @@ describe('Transcript · Draw this flow', () => {
     expect(screen.queryByText('Draw')).not.toBeInTheDocument(); // no pill: it was typed
   });
 
+  it('with nowhere to send a follow-up, the chips are gone and the rest of the bar stays', async () => {
+    renderTranscript([question('', { mode: 'draw', variant: 'business' }), answer({ displayText: DIAGRAM, stopReason: 'end' })], { onDrawFollowUp: undefined });
+    await waitFor(() => expect(screen.getByText(DIAGRAM_FOOTER('Anthropic'))).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Open in Excalidraw' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'copy the Mermaid text' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: DRAW_CHIP.admins })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: DRAW_CHIP.fromElement })).not.toBeInTheDocument();
+  });
+
   it('the every-element picture hides its own chip and names anything the flow does not have', async () => {
     const admin = '```mermaid\nflowchart TD\n  Start --> CheckCustomerType{"CheckCustomerType"}\n  CheckCustomerType -->|Enterprise| Delete_Everything["Delete_Everything"]\n```';
     renderTranscript([question('Draw every element', { mode: 'draw', variant: 'admins' }), answer({ displayText: admin, stopReason: 'end' })]);

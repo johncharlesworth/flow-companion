@@ -25,7 +25,11 @@ export interface ShellProps {
   /** Injected by the gallery to freeze "Saved … ago". */
   now?: number;
   initialView?: ShellView;
-  /** Demo mode: Settings hides "Try the demo" because this already is the demo. */
+  /**
+   * Demo mode: the bundled demo flow. Settings hides its links to the sample
+   * flow because this already is it, and the chat plays recorded answers, with
+   * or without a key, instead of stopping at "Set up your AI".
+   */
   demo?: boolean;
 }
 
@@ -63,13 +67,15 @@ export function Shell({ state, refreshing, onRefresh, readiness, settings, onUpd
     return <SettingsView onBack={() => setView('panel')} firstRun={firstRun} onStartChatting={() => setView('panel')} demo={demo} />;
   }
 
-  if (!readiness.ready) {
+  // The demo flow is recorded, key or no key, so it never waits for one; everything else does.
+  const recorded = demo;
+  if (!readiness.ready && !demo) {
     return (
       <div className="flex h-full flex-col">
         <Header flow={null} onOpenSettings={openSettings} now={now} />
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <PanelState
-            {...setUpAiState(readiness.forgotten ? 'forgotten' : readiness.unchecked ? 'unchecked' : 'first', openSettings, settings.activeProvider ? providerName(settings.activeProvider) : undefined)}
+            {...setUpAiState(readiness.forgotten ? 'forgotten' : readiness.unchecked ? 'unchecked' : 'first', openSettings, settings.activeProvider ? providerName(settings.activeProvider) : undefined, excalidrawPending())}
           />
         </main>
       </div>
@@ -82,7 +88,7 @@ export function Shell({ state, refreshing, onRefresh, readiness, settings, onUpd
 
   const flow = headerFlow(state);
   if (state.kind === 'flow' && flow) {
-    return <ChatView flow={state.flow} header={flow} refreshing={refreshing} onRefresh={onRefresh} settings={settings} onUpdateSettings={onUpdateSettings} onOpenSettings={openSettings} now={now} />;
+    return <ChatView flow={state.flow} header={flow} refreshing={refreshing} onRefresh={onRefresh} settings={settings} onUpdateSettings={onUpdateSettings} onOpenSettings={openSettings} now={now} recorded={recorded} keyReady={readiness.ready} />;
   }
   const empty = describeState(state, { refresh: onRefresh, excalidrawPending: excalidrawPending() });
 

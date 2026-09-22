@@ -1,6 +1,6 @@
 {
   "name": "flow-companion",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Chrome side-panel extension: chat about the Salesforce Flow you have open, with your own AI key.",
   "license": "GPL-3.0-only",
@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
-    "zip": "wxt zip",
+    "zip": "node scripts/check-demo-recordings.ts && node scripts/third-party-notices.ts && wxt zip",
     "postinstall": "wxt prepare",
     "typecheck": "wxt prepare && tsc --noEmit",
     "lint": "eslint .",
@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "eval": "node --env-file-if-exists=.env.eval node_modules/vitest/vitest.mjs run --config vitest.eval.config.ts",
+    "record-demo": "node --env-file-if-exists=.env.eval node_modules/vitest/vitest.mjs run --config vitest.record.config.ts",
     "size": "node scripts/check-bundle-size.ts",
     "links": "node scripts/check-links.ts",
     "icons": "node scripts/render-icons.ts",

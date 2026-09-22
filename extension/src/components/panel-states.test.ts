@@ -30,6 +30,22 @@ describe('describeState', () => {
     expect(describeState({ kind: 'notOnFlowPage', sfHost: SF }, { refresh: vi.fn(), excalidrawPending: 'elements' })?.note).toBeUndefined();
   });
 
+  it('"Not on Salesforce" offers the demo flow, with a note that claims nothing about the key; "Open a Flow" offers nothing', () => {
+    expect(describeState({ kind: 'notOnSalesforce' }, { refresh: vi.fn() })?.link).toEqual({
+      label: 'Try a demo flow',
+      href: '/sidepanel.html?demo=1',
+      note: 'Opens in a new tab.',
+    });
+    expect(describeState({ kind: 'notOnFlowPage', sfHost: SF }, { refresh: vi.fn() })?.link).toBeUndefined();
+    expect(describeState({ kind: 'unsavedFlow', sfHost: SF }, { refresh: vi.fn() })?.link).toBeUndefined();
+  });
+
+  it('while the Excalidraw paste note is showing, "Not on Salesforce" keeps to that one instruction: no demo-flow link', () => {
+    expect(describeState({ kind: 'notOnSalesforce' }, { refresh: vi.fn(), excalidrawPending: 'elements' })?.link).toBeUndefined();
+    expect(describeState({ kind: 'notOnSalesforce' }, { refresh: vi.fn(), excalidrawPending: 'text' })?.link).toBeUndefined();
+    expect(describeState({ kind: 'notOnSalesforce' }, { refresh: vi.fn(), excalidrawPending: null })?.link?.label).toBe('Try a demo flow');
+  });
+
   it('session states carry a Check again action that re-derives', () => {
     const refresh = vi.fn();
     for (const state of [
@@ -49,6 +65,14 @@ describe('describeState', () => {
     expect(describeState({ kind: 'error', errorKind: 'unknown', sfHost: SF }, { refresh })?.action?.label).toBe('Try again');
     expect(describeState({ kind: 'error', errorKind: 'proxyBlocked', sfHost: SF }, { refresh })?.action).toBeUndefined();
     expect(describeState({ kind: 'error', errorKind: 'apiDisabled', sfHost: SF }, { refresh })?.action).toBeUndefined();
+  });
+
+  it('shows the Excalidraw paste note on the gate while an export is pending', () => {
+    expect(setUpAiState('first', vi.fn(), undefined, 'elements').note).toMatch(/on the clipboard/);
+    expect(setUpAiState('first', vi.fn(), undefined, 'text').note).toMatch(/More tools → Mermaid to Excalidraw/);
+    expect(setUpAiState('first', vi.fn(), undefined, null).note).toBeUndefined();
+    expect(setUpAiState('forgotten', vi.fn(), undefined, null).note).toBe(DISCLOSURE_GENERIC);
+    expect(setUpAiState('first', vi.fn(), undefined, 'elements').link?.label).toBe('See it on a demo flow first');
   });
 
   it('never leaks technical words into the copy', () => {
@@ -72,8 +96,9 @@ describe('setUpAiState', () => {
     const onSetUp = vi.fn();
     const first = setUpAiState('first', onSetUp);
     expect(first.title).toBe('Set up your AI');
-    expect(first.body).toBe('Flow Companion uses an AI account you own. Paste a key from Anthropic, OpenAI, or Google.');
-    expect(first.note).toBe(DISCLOSURE_GENERIC);
+    expect(first.body).toBe('Flow Companion uses an API key from an AI account you own. When you chat, your flow’s saved metadata is sent to the AI provider you choose, under your key. Nothing else leaves your browser.');
+    expect(first.note).toBeUndefined();
+    expect(DISCLOSURE_GENERIC).toBe('When you chat, this flow’s saved metadata is sent to the AI provider you choose, under your key. Nothing else leaves your browser.');
     first.action?.onClick();
     expect(onSetUp).toHaveBeenCalled();
     expect(setUpAiState('forgotten', onSetUp).body).toBe('Your key was forgotten when Chrome closed, as you chose. Paste it again to continue.');
@@ -81,5 +106,15 @@ describe('setUpAiState', () => {
     expect(unchecked.title).toBe('Check your key');
     expect(unchecked.body).toBe('Your key is saved, but Anthropic couldn’t be reached to check it. Open Settings and check again.');
     expect(unchecked.action?.label).toBe('Open Settings');
+  });
+
+  it('only the first-run gate offers the demo flow; a forgotten or unchecked key has one thing to do', () => {
+    expect(setUpAiState('first', vi.fn()).link).toEqual({
+      label: 'See it on a demo flow first',
+      href: '/sidepanel.html?demo=1',
+      note: 'No key needed. Opens in a new tab.',
+    });
+    expect(setUpAiState('forgotten', vi.fn()).link).toBeUndefined();
+    expect(setUpAiState('unchecked', vi.fn(), 'Anthropic').link).toBeUndefined();
   });
 });

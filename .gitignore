@@ -20,6 +20,10 @@ Thumbs.db
 references/
 scripts/pii-deny-list.txt
 
+# Generated into the package by `npm run zip` (extension/scripts/third-party-notices.ts)
+extension/public/THIRD-PARTY-NOTICES.txt
+extension/public/LICENSE.txt
+
 # WXT / Playwright outputs
 .wxt/
 .output/

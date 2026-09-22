@@ -16,7 +16,13 @@ export const PRICING_URL: Record<ProviderId, string> = {
 };
 
 /** The homepage section that explains what is sent; the site must be live before the store submission. */
-export const WHAT_IS_SENT_URL = 'https://getflowcompanion.com/#what-is-sent';
+// The docs page that opens on "What leaves your browser" and then answers the
+// session, key, and permission questions in order; not the homepage anchor.
+export const WHAT_IS_SENT_URL = 'https://getflowcompanion.com/docs/privacy-and-security.html';
+
+/** The docs index and the public repository's issues, linked from the bottom of Settings. */
+export const DOCS_URL = 'https://getflowcompanion.com/docs/';
+export const ISSUES_URL = 'https://github.com/johncharlesworth/flow-companion/issues';
 
 export const CARD_TITLE: Record<ProviderId, string> = {
   anthropic: 'Anthropic · Claude models',
@@ -25,7 +31,7 @@ export const CARD_TITLE: Record<ProviderId, string> = {
 };
 
 export function disclosureFor(providerLabel: string): string {
-  return `When you chat, this flow’s saved metadata — element names, formulas, and text — is sent to ${providerLabel} under your key. No records, and nothing goes anywhere else.`;
+  return `When you chat, this flow’s saved metadata — element names, formulas, and text — is sent to ${providerLabel} under your key.`;
 }
 
 export const SUBSCRIPTION_NOTE = 'Pick the provider you have an account with, then paste an API key from its developer console. A ChatGPT, Claude, or Gemini chat subscription won’t work here; you need an API key.';

@@ -151,8 +151,11 @@ export function buildOutline(flow: unknown): FlowOutline {
 }
 
 /** "84 elements" (the size word was cut from the UI: the consequences are said in words where they matter) */
+/** "5 elements, 3 resources"; resources are left out when there are none, so the count matches the rows the outline opens to. */
 export function summaryLine(outline: FlowOutline): string {
-  return `${outline.elementCount} element${outline.elementCount === 1 ? '' : 's'}`;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const elements = plural(outline.elementCount, 'element');
+  return outline.resourceCount > 0 ? `${elements}, ${plural(outline.resourceCount, 'resource')}` : elements;
 }
 
 /** Case-insensitive match on label or API name; groups keep their order. */

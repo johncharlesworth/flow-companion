@@ -36,8 +36,8 @@ export interface TranscriptProps {
   onDownloadDocument: (markdown: string) => void;
   /** Try again under a diagram that would not draw: re-sends the last question. */
   onRedo: () => void;
-  /** The follow-up chips under a drawn diagram. */
-  onDrawFollowUp: (variant: keyof typeof DRAW_CHIP) => void;
+  /** The follow-up chips under a drawn diagram; without it the chips are not shown. */
+  onDrawFollowUp?: (variant: keyof typeof DRAW_CHIP) => void;
   /** The flow's saved metadata, for the "names not in this flow" note. */
   flowMetadata: unknown;
 }
@@ -279,8 +279,8 @@ function DocumentBar({ markdown, onDownload }: { markdown: string; onDownload: (
   );
 }
 
-/** Footer, Open in Excalidraw with its one line, and the two follow-up chips under a rendered diagram . */
-function DiagramBar({ text, provider, flowMetadata, variant, onFollowUp }: { text: string; provider: string; flowMetadata: unknown; variant?: DrawVariant; onFollowUp: (variant: keyof typeof DRAW_CHIP) => void }) {
+/** Footer, Open in Excalidraw with its one line, and the two follow-up chips under a rendered diagram (the chips only when there is somewhere to send them). */
+function DiagramBar({ text, provider, flowMetadata, variant, onFollowUp }: { text: string; provider: string; flowMetadata: unknown; variant?: DrawVariant; onFollowUp?: (variant: keyof typeof DRAW_CHIP) => void }) {
   const [hint, setHint] = useState<ExcalidrawRoute | null>(null);
   const [opening, setOpening] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -330,16 +330,18 @@ function DiagramBar({ text, provider, flowMetadata, variant, onFollowUp }: { tex
           </span>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
-        {variant !== 'admins' && (
-          <Chip icon={<Waypoints className="h-4 w-4 text-accent" aria-hidden="true" />} onClick={() => onFollowUp('admins')}>
-            {DRAW_CHIP.admins}
+      {onFollowUp && (
+        <div className="flex flex-wrap gap-2">
+          {variant !== 'admins' && (
+            <Chip icon={<Waypoints className="h-4 w-4 text-accent" aria-hidden="true" />} onClick={() => onFollowUp('admins')}>
+              {DRAW_CHIP.admins}
+            </Chip>
+          )}
+          <Chip icon={<Waypoints className="h-4 w-4 text-accent" aria-hidden="true" />} onClick={() => onFollowUp('fromElement')}>
+            {DRAW_CHIP.fromElement}
           </Chip>
-        )}
-        <Chip icon={<Waypoints className="h-4 w-4 text-accent" aria-hidden="true" />} onClick={() => onFollowUp('fromElement')}>
-          {DRAW_CHIP.fromElement}
-        </Chip>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

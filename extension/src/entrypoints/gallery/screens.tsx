@@ -64,6 +64,8 @@ export const SCREENS: Record<string, () => ReactNode> = {
   'set-up-ai': () => <Shell state={loaded()} refreshing={false} onRefresh={noop} readiness={{ ready: false, forgotten: false, unchecked: false }} settings={SETTINGS} onUpdateSettings={noUpdate} now={NOW} />,
   'set-up-ai-forgotten': () => <Shell state={loaded()} refreshing={false} onRefresh={noop} readiness={{ ready: false, forgotten: true, unchecked: false }} settings={SETTINGS} onUpdateSettings={noUpdate} now={NOW} />,
   'set-up-ai-unchecked': () => <Shell state={loaded()} refreshing={false} onRefresh={noop} readiness={{ ready: false, forgotten: false, unchecked: true }} settings={SETTINGS} onUpdateSettings={noUpdate} now={NOW} />,
+  // The demo flow with no key: the four actions play recorded answers and the message box is off, with the link to set a key up.
+  'demo-recorded': () => <Shell demo state={loaded({ status: 'Active', active: 4 })} refreshing={false} onRefresh={noop} readiness={{ ready: false, forgotten: false, unchecked: false }} settings={defaultSettings()} onUpdateSettings={noUpdate} now={NOW} />,
   'settings-first-run': () => <Shell state={{ kind: 'notOnSalesforce' }} refreshing={false} onRefresh={noop} readiness={{ ready: false, forgotten: false, unchecked: false }} settings={SETTINGS} onUpdateSettings={noUpdate} now={NOW} initialView="settings" />,
   settings: () => <Shell state={{ kind: 'notOnSalesforce' }} refreshing={false} onRefresh={noop} readiness={READY} settings={SETTINGS} onUpdateSettings={noUpdate} now={NOW} initialView="settings" />,
   'settings-key-saved': () => <Shell state={{ kind: 'notOnSalesforce' }} refreshing={false} onRefresh={noop} readiness={READY} settings={SETTINGS} onUpdateSettings={noUpdate} now={NOW} initialView="settings" />,

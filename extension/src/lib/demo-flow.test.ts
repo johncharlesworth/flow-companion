@@ -11,7 +11,7 @@ describe('demo-flow', () => {
     expect(isDemoRequested('?other=1')).toBe(false);
   });
 
-  it('loads the sample flow as an active v4 saved just now, keyed to its own org so it never mixes with a real chat', async () => {
+  it('loads the demo flow as an active v4 saved just now, keyed to its own org so it never mixes with a real chat', async () => {
     const now = Date.parse('2026-09-03T12:00:00.000Z');
     const flow = await loadDemoFlow(now);
     expect(flow.loaded.record).toMatchObject({ MasterLabel: DEMO_LABEL, VersionNumber: 4, Status: 'Active', LastModifiedDate: '2026-09-03T12:00:00.000Z' });

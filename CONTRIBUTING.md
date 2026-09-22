@@ -17,6 +17,7 @@ This repository receives a snapshot at each release, so it carries no day-to-day
 3. Tests first for anything pure (parsers, the registry, prompt assembly, the size estimate). Run `npm run check` in `extension/` before opening the PR; it runs the PII scan, lint, typecheck, unit tests, build, bundle-size check, and the Playwright specs in CI order.
 4. Any change to the system prompt, the model registry, or a provider adapter must be accompanied by a re-run of the grounding eval (`npm run eval`) with the results committed.
 5. The PII scanner blocks real Salesforce ids, tenant hosts, provider keys, and local paths. `--no-verify` is not acceptable. If the scanner flags a synthetic literal, add it to `scripts/pii-allowlist.txt` with a one-line explanation of why it is synthetic.
+6. Contributions are accepted under the project's licence, GPL-3.0, on the same terms as the rest of the code, and you keep the copyright to what you write. By opening a pull request you confirm you have the right to contribute what you send.
 
 ## Scope
 

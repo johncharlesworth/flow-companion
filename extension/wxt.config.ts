@@ -52,8 +52,10 @@ export default defineConfig({
   filterEntrypoints: process.env.WXT_GALLERY ? undefined : ['background', 'sidepanel'],
   manifest: (env) => ({
     name: 'Flow Companion for Salesforce',
+    // The store shows this as the listing's summary and the dashboard cannot
+    // edit it, so the approved store line lives here (132-character limit).
     description:
-      'Chat about the Salesforce Flow you have open in Flow Builder, using your own Anthropic, OpenAI, or Google key.',
+      'Chat with your Salesforce flows using the AI model of your choice.',
     minimum_chrome_version: '114',
     // Exactly these three. No `tabs`: tab URLs are readable through the
     // Salesforce host permissions alone, so the install prompt never says

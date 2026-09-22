@@ -1,0 +1,6 @@
+{
+  "provider": "anthropic",
+  "model": "claude-sonnet-5",
+  "modelLabel": "Claude Sonnet 5",
+  "recordedOn": "2026-09-19"
+}

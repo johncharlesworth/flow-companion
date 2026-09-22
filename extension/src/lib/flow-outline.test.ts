@@ -20,7 +20,9 @@ describe('buildOutline', () => {
     expect(outline.resourceCount).toBe(3);
     const decision = outline.groups.find((g) => g.type === 'decisions')!.items[0]!;
     expect(decision).toEqual({ name: 'CheckCustomerType', label: 'Check Customer Type', type: 'decisions', kind: 'element' });
-    expect(summaryLine(outline)).toBe('5 elements');
+    expect(summaryLine(outline)).toBe('5 elements, 3 resources');
+    expect(summaryLine({ ...outline, resourceCount: 0 })).toBe('5 elements');
+    expect(summaryLine({ ...outline, elementCount: 1, resourceCount: 1 })).toBe('1 element, 1 resource');
   });
 
   it('builds the reverse index over every connector shape', () => {

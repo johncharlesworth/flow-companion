@@ -8,7 +8,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { loadDemoFlow } from '@/lib/demo-flow';
 
 export interface AppProps {
-  /** Demo mode: the bundled sample flow instead of the active tab's. */
+  /** Demo mode: the bundled demo flow instead of the active tab's. */
   demo?: boolean;
 }
 
@@ -24,7 +24,7 @@ function DemoApp() {
   return <Frame active={useDemoFlow()} demo />;
 }
 
-/** The sample flow, loaded once; Refresh has nothing to re-read. */
+/** The demo flow, loaded once; Refresh has nothing to re-read. */
 function useDemoFlow(): UseActiveFlowResult {
   const [state, setState] = useState<ActiveFlowState>({ kind: 'loading' });
   useEffect(() => {

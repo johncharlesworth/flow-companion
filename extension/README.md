@@ -12,11 +12,13 @@ Node 24 (see `.nvmrc`; 22.18 or later also works, because the two helper scripts
 npm install          # also runs `wxt prepare` (generates .wxt/ types)
 npm run dev          # WXT dev build with reload
 npm run build        # production build → .output/chrome-mv3/
+npm run zip          # the store package → .output/*.zip, with LICENSE.txt and THIRD-PARTY-NOTICES.txt inside; refuses while the demo answers are placeholders
 npm test             # Vitest unit tests (happy-dom, fake browser APIs)
 npm run lint         # ESLint 10, flat config; @eslint-react/dom-no-dangerously-set-innerhtml is an error (no eslint-plugin-react: it crashes on ESLint 10)
 npm run typecheck    # tsc --noEmit
 npm run e2e          # Playwright specs (smoke, tab following, chat with a paced SSE mock, demo, draw) against the production build
 npm run eval         # grounding eval against a real provider; reads the gitignored extension/.env.eval (EVAL_PROVIDER=anthropic, ANTHROPIC_API_KEY=…, EVAL_MODEL optional) or the environment; results → test/fixtures/
+npm run record-demo  # re-record the demo flow's answers with a real key (.env.eval)
 npm run size         # bundle budget on .output/chrome-mv3/: startup files under 3 MB, whole package under 6 MB, no mermaid/excalidraw chunk at startup
 npm run links        # every provider page the product links to still answers (weekly in CI, and before a release)
 npm run pii          # PII scanner over every tracked file (what CI runs)

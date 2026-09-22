@@ -74,7 +74,8 @@ test('first run: paste a key, start chatting, and stream an answer about the ope
   await flowTab.bringToFront();
   await expect(panel.getByRole('heading', { level: 1 })).toHaveText(FLOW_A_LABEL);
   await expect(panel.getByText('Ready. Ask anything about this flow.')).toBeVisible();
-  await expect(panel.getByRole('button', { name: `About this flow: ${FLOW_A_LABEL}` })).toBeVisible(); // the flow chip, name only
+  await expect(panel.getByRole('button', { name: `About this flow: ${FLOW_A_LABEL}` })).toBeVisible(); // the gauge, named after the flow
+  await expect(panel.getByText(FLOW_A_LABEL)).toHaveCount(1); // the header; the message box no longer repeats the name
 
   const message = panel.getByLabel('Message');
   await message.fill('What does this flow do?');
