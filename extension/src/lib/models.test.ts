@@ -108,6 +108,7 @@ describe('buildPicker', () => {
       'anthropic',
       [
         { id: 'claude-opus-5', maxInputTokens: 1_000_000 },
+        { id: 'claude-opus-5-5', maxInputTokens: 1_000_000 },
         { id: 'claude-sonnet-5', maxInputTokens: 1_000_000 },
         { id: 'claude-haiku-4-5-20251001', maxInputTokens: 200_000 },
         { id: 'claude-sonnet-4-6', maxInputTokens: 1_000_000 },
@@ -115,13 +116,25 @@ describe('buildPicker', () => {
       ],
       250_000,
     );
+    // Opus 5.5 is the most capable; Opus 5 sits under More.
     expect(picker.recommended.map((m) => [m.id, m.role, m.tooSmall])).toEqual([
       ['claude-sonnet-5', 'default', false],
-      ['claude-opus-5', 'mostCapable', false],
+      ['claude-opus-5-5', 'mostCapable', false],
       ['claude-haiku-4-5-20251001', 'fastest', true],
     ]);
-    expect(picker.more.map((m) => m.id)).toEqual(['claude-sonnet-4-6', 'claude-something-experimental']);
-    expect(picker.more[1]).toMatchObject({ label: 'claude-something-experimental', family: 'unknown', maxInputTokens: UNKNOWN_MODEL_INPUT_TOKENS, tooSmall: true });
+    expect(picker.recommended[1]).toMatchObject({ label: 'Claude Opus 5.5', family: 'anthropic-5', contextWindow: 1_000_000 });
+    expect(picker.more.map((m) => m.id)).toEqual(['claude-opus-5', 'claude-sonnet-4-6', 'claude-something-experimental']);
+    expect(picker.more[2]).toMatchObject({ label: 'claude-something-experimental', family: 'unknown', maxInputTokens: UNKNOWN_MODEL_INPUT_TOKENS, tooSmall: true });
+  });
+
+  it('a key checked before Opus 5.5 existed keeps Opus 5 as Most capable', () => {
+    const picker = buildPicker('anthropic', [{ id: 'claude-sonnet-5' }, { id: 'claude-opus-5' }, { id: 'claude-haiku-4-5-20251001' }, { id: 'claude-opus-4-8' }], null);
+    expect(picker.recommended.map((m) => [m.id, m.role])).toEqual([
+      ['claude-sonnet-5', 'default'],
+      ['claude-opus-5', 'mostCapable'],
+      ['claude-haiku-4-5-20251001', 'fastest'],
+    ]);
+    expect(picker.more.map((m) => m.id)).toEqual(['claude-opus-4-8']);
   });
 
   it('a retired registry model that the live list no longer returns simply disappears', () => {

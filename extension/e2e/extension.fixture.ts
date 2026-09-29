@@ -12,6 +12,8 @@ type Fixtures = {
   extensionId: string;
   /** Every CSP violation any page in the context reported; a spec fails if there was one. */
   cspViolations: string[];
+  /** Every uncaught error any page threw; a spec fails if there was one. */
+  pageErrors: string[];
 };
 
 // Loads the production build (`npm run build` first) into a fresh Chromium
@@ -60,6 +62,20 @@ export const test = base.extend<Fixtures>({
       context.on('page', watch);
       await use(violations);
       expect(violations, 'CSP violations').toEqual([]);
+    },
+    { auto: true },
+  ],
+  // An error the page recovers from is still a bug: React can recover from a throw
+  // during render and still show a normal screen, so this fixture fails the spec on
+  // any page error.
+  pageErrors: [
+    async ({ context }, use) => {
+      const errors: string[] = [];
+      const watch = (page: Page) => page.on('pageerror', (error) => errors.push(`${page.url()}: ${error.message}`));
+      context.pages().forEach(watch);
+      context.on('page', watch);
+      await use(errors);
+      expect(errors, 'uncaught page errors').toEqual([]);
     },
     { auto: true },
   ],

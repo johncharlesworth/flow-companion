@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './extension.fixture';
 import { FLOW_A, FLOW_B, FLOWS_LIST, mockSalesforce, seedReadyKey } from './salesforce.mock';
 
-// Step-2 acceptance in a real Chromium: the panel (opened as a tab so Playwright
+// Active-flow tracking in a real Chromium: the panel (opened as a tab so Playwright
 // can read it) follows real tab activations in its own window, and a tab change
 // in another window does nothing. Salesforce is mocked at the network layer;
 // no request leaves the machine.

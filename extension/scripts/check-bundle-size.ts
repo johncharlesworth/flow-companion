@@ -1,6 +1,7 @@
-// Bundle budget, in two parts (decision). STARTUP: everything the side panel loads when it opens, that is
-// sidepanel.html, the scripts it references and every chunk they import
-// statically (transitively), its stylesheets, and the fonts those reference.
+// Bundle budget, in two parts. STARTUP: everything the side panel loads when
+// it opens, that is sidepanel.html, the scripts it references and every chunk
+// they import statically (transitively), its stylesheets, and the fonts those
+// reference.
 // That stays under 3 MB so opening the panel never slows down. TOTAL: the whole
 // unpacked package, including chunks loaded only on demand (the Mermaid
 // renderer, the Excalidraw converter), under 6 MB. The check also fails if any

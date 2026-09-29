@@ -28,8 +28,6 @@ export interface Settings {
   theme: ThemeSetting;
   detail: Detail;
   customInstructions: string;
-  /** The "drag the panel's edge" tip has done its job: the user has sent a first message. */
-  resizeTipDone: boolean;
 }
 
 export const SETTINGS_KEY = 'settings';
@@ -47,7 +45,6 @@ export function defaultSettings(): Settings {
     theme: 'system',
     detail: 'balanced',
     customInstructions: '',
-    resizeTipDone: false,
   };
 }
 
@@ -85,7 +82,6 @@ export function normalizeSettings(raw: unknown): Settings {
   if (isThemeSetting(r.theme)) out.theme = r.theme;
   if (r.detail === 'concise' || r.detail === 'balanced' || r.detail === 'thorough') out.detail = r.detail;
   if (typeof r.customInstructions === 'string') out.customInstructions = r.customInstructions.slice(0, CUSTOM_INSTRUCTIONS_MAX);
-  if (typeof r.resizeTipDone === 'boolean') out.resizeTipDone = r.resizeTipDone;
   return out;
 }
 

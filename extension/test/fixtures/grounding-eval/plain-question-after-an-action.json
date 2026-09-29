@@ -1,0 +1,192 @@
+{
+  "name": "plain-question-after-an-action",
+  "category": "format",
+  "note": "A typed question after a Draw: the earlier turn carries a response contract, this one does not. The failure looks like an opening such as \"Since there's no format contract this time, I'll just answer directly.\" or \"No format contract this time, so I'll answer in plain prose.\" The answer must never remark on the contract.",
+  "flow": {
+    "actionCalls": [
+      {
+        "name": "UpdateAccount",
+        "label": "Update Account Info",
+        "actionName": "UpdateAccount",
+        "actionType": "flow",
+        "connector": {
+          "targetReference": "AssignFollowupOwner"
+        },
+        "inputParameters": [
+          {
+            "name": "accountId",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          },
+          {
+            "name": "newStatus",
+            "value": {
+              "stringValue": "Active"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 180
+      }
+    ],
+    "assignments": [
+      {
+        "name": "AssignFollowupOwner",
+        "label": "Assign Followup Owner",
+        "assignmentItems": [
+          {
+            "assignToReference": "$Record.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "elementReference": "DefaultOwnerVariable"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "CreateFollowupTask"
+        },
+        "locationX": 250,
+        "locationY": 280
+      }
+    ],
+    "decisions": [
+      {
+        "name": "CheckCustomerType",
+        "label": "Check Customer Type",
+        "defaultConnector": {
+          "targetReference": "AssignFollowupOwner"
+        },
+        "defaultConnectorLabel": "Other",
+        "rules": [
+          {
+            "name": "Enterprise",
+            "label": "Enterprise",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.AccountType",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Enterprise"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "UpdateAccount"
+            }
+          },
+          {
+            "name": "SMB",
+            "label": "SMB",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "$Record.AccountType",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "SMB"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "AssignFollowupOwner"
+            }
+          }
+        ],
+        "locationX": 250,
+        "locationY": 80
+      }
+    ],
+    "formulas": [
+      {
+        "name": "AccountAgeInDays",
+        "label": "Account Age (Days)",
+        "dataType": "Number",
+        "expression": "TODAY() - DATEVALUE({!$Record.CreatedDate})",
+        "scale": 0
+      },
+      {
+        "name": "IsHighPriorityAccount",
+        "label": "Is High Priority",
+        "dataType": "Boolean",
+        "expression": "AND({!$Record.AnnualRevenue} > 1000000, {!AccountAgeInDays} > 365)"
+      }
+    ],
+    "recordCreates": [
+      {
+        "name": "CreateFollowupTask",
+        "label": "Create Followup Task",
+        "inputAssignments": [
+          {
+            "field": "Subject",
+            "value": {
+              "stringValue": "Follow up with customer"
+            }
+          },
+          {
+            "field": "WhatId",
+            "value": {
+              "elementReference": "$Record.Id"
+            }
+          },
+          {
+            "field": "OwnerId",
+            "value": {
+              "elementReference": "$Record.OwnerId"
+            }
+          }
+        ],
+        "object": "Task",
+        "connector": null,
+        "locationX": 250,
+        "locationY": 380
+      }
+    ],
+    "start": {
+      "connector": {
+        "targetReference": "CheckCustomerType"
+      },
+      "locationX": 50,
+      "locationY": 0,
+      "triggerType": "RecordAfterSave",
+      "object": "Account",
+      "recordTriggerType": "Update"
+    },
+    "variables": [
+      {
+        "name": "DefaultOwnerVariable",
+        "dataType": "String",
+        "isCollection": false,
+        "isInput": false,
+        "isOutput": false,
+        "value": {
+          "stringValue": "005000000000000AAA"
+        }
+      }
+    ],
+    "interviewLabel": "Synthetic Flow {!$Flow.CurrentDateTime}",
+    "label": "Synthetic Test Flow",
+    "processMetadataValues": [],
+    "processType": "AutoLaunchedFlow",
+    "runInMode": "DefaultMode",
+    "status": "Active",
+    "apiVersion": 62
+  },
+  "history": [
+    {
+      "mode": "draw",
+      "variant": "business",
+      "question": "",
+      "answer": "```mermaid\nflowchart TD\n  A[\"An account is updated\"] --> B{\"What type of customer?\"}\n  B -->|Enterprise| C[\"Update the account\"]\n  B -->|SMB or other| D[\"Assign a follow-up owner\"]\n  C --> D\n  D --> E[\"Create a follow-up task\"]\n```\n\nThe flow checks the customer type, updates enterprise accounts, and always ends by assigning an owner and creating a follow-up task."
+    }
+  ],
+  "userQuestion": "What's your opinion of this flow?",
+  "passMatchers": {
+    "noneOfStrict": [
+      "contract",
+      "plain prose",
+      "no format"
+    ]
+  }
+}

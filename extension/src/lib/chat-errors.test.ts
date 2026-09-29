@@ -6,7 +6,7 @@ import type { ChatErrorClass } from './providers/types';
 const ALL: ChatErrorClass[] = ['keyRejected', 'noCredit', 'rateLimit', 'modelUnavailable', 'providerBusy', 'requestTooLarge', 'interrupted', 'unknown'];
 
 describe('chatErrorCopy', () => {
-  it('uses the plan’s sentences and names the provider', () => {
+  it('gives each error class its sentence and names the provider', () => {
     expect(chatErrorCopy('keyRejected', 'anthropic').body).toBe('Your Anthropic key no longer works. Update it in Settings.');
     expect(chatErrorCopy('noCredit', 'openai').body).toMatch(/OpenAI says the account has no usage credit yet/);
     expect(chatErrorCopy('rateLimit', 'google').body).toBe('Your Google account hit its rate limit. Wait a minute, then retry. If it keeps happening, Google’s site shows how to raise the limit.');
@@ -27,6 +27,6 @@ describe('chatErrorCopy', () => {
   it('retry is offered only where retrying can help', () => {
     expect(chatErrorCopy('keyRejected', 'anthropic').actions).toEqual(['openSettings']);
     expect(chatErrorCopy('rateLimit', 'anthropic').actions).toContain('retry');
-    expect(chatErrorCopy('modelUnavailable', 'anthropic').actions).toEqual(['openModelMenu']);
+    expect(chatErrorCopy('modelUnavailable', 'anthropic').actions).toEqual(['openModelMenu', 'retry']); // pick another, then re-send
   });
 });

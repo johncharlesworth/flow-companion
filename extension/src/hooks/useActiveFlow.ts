@@ -1,8 +1,8 @@
 // Follows the active tab of the panel's own window and keeps the flow it
-// shows loaded. This replaces the earlier build message bus: the panel reads tabs
-// and cookies itself (no content script, no background round-trip).
+// shows loaded. The panel reads tabs and cookies itself: no content script, no
+// message bus, no background round-trip.
 //
-// Lessons from the v1 tab-switching bug, all encoded here:
+// What following tabs reliably takes, all encoded here:
 // - resolve the panel's windowId once and ignore events from other windows;
 // - listen to onActivated and onUpdated (url changes and status changes: without
 //   the tabs permission Chrome strips the url from updates for hosts the

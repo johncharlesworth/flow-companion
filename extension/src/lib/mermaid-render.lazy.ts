@@ -1,6 +1,6 @@
-// The Mermaid renderer, loaded only when a diagram is on screen (,
-//). Nothing imports this module statically: FlowDiagram
-// reaches it through `import`, so the panel starts without the 2 MB chunk
+// The Mermaid renderer, loaded only when a diagram is on screen. Nothing imports
+// this module statically: FlowDiagram reaches it through a dynamic `import()`, so
+// the panel starts without the 2 MB chunk
 // and the bundle check fails if that ever changes. Strict mode: Mermaid runs
 // its output through DOMPurify, labels are plain text (no HTML), and click
 // handlers are disabled.

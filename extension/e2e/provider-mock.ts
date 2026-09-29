@@ -1,11 +1,11 @@
 import type { BrowserContext, Page } from '@playwright/test';
 
-// A paced Anthropic mock installed inside the panel page (,
-// "a paced SSE stream"). Playwright's network routes can only
-// fulfil a response in one piece, so the pacing has to live in the page: the
-// init script replaces `fetch` for api.anthropic.com and streams the scripted
-// answer chunk by chunk on a timer, honouring the adapter's AbortSignal. Every
-// other host still goes to the network layer (where Salesforce is routed).
+// A paced Anthropic SSE mock installed inside the panel page. Playwright's
+// network routes can only fulfil a response in one piece, so the pacing has to
+// live in the page: the init script replaces `fetch` for api.anthropic.com and
+// streams the scripted answer chunk by chunk on a timer, honouring the
+// adapter's AbortSignal. Every other host still goes to the network layer
+// (where Salesforce is routed).
 
 export interface MockAnswer {
   /** Text deltas, streamed one per `delayMs`. */
@@ -14,6 +14,8 @@ export interface MockAnswer {
   stopReason?: 'end_turn' | 'max_tokens' | 'refusal';
   inputTokens?: number;
   cachedInputTokens?: number;
+  /** Answer with this HTTP error instead of a stream (401: the key no longer works). */
+  status?: number;
 }
 
 export interface ProviderMockConfig {
@@ -47,6 +49,7 @@ function mockScript(config: ProviderMockConfig) {
   const json = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { 'content-type': 'application/json' } });
   const models = config.models ?? [
     { id: 'claude-sonnet-5', max_input_tokens: 1_000_000 },
+    { id: 'claude-opus-5-5', max_input_tokens: 1_000_000 },
     { id: 'claude-opus-5', max_input_tokens: 1_000_000 },
     { id: 'claude-haiku-4-5-20251001', max_input_tokens: 200_000 },
   ];
@@ -64,6 +67,7 @@ function mockScript(config: ProviderMockConfig) {
 
     const index = calls.filter((c) => c.url.endsWith('/v1/messages')).length - 1;
     const answer = config.answers[Math.min(index, config.answers.length - 1)]!;
+    if (answer.status) return new Response(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }), { status: answer.status, headers: { 'content-type': 'application/json' } });
     const signal = init?.signal ?? null;
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {

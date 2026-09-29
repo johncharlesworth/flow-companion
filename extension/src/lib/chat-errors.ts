@@ -1,5 +1,5 @@
-// Chat-time error copy (table). Every class has a title, one
-// sentence, and one action. Raw provider text never reaches this file.
+// Chat-time error copy: every class has a title, a short body, and its actions.
+// Raw provider text never reaches this file.
 
 import { type ProviderId, providerName } from './models';
 import type { ChatErrorClass } from './providers/types';
@@ -42,7 +42,8 @@ export function chatErrorCopy(cls: ChatErrorClass, provider: ProviderId, extra: 
         actions: ['retry', 'openProviderSite'],
       };
     case 'modelUnavailable':
-      return { title: 'Model unavailable', body: 'This model is no longer available. Pick another.', actions: ['openModelMenu'] };
+      // Retry after picking another: it re-sends the question on the model now chosen.
+      return { title: 'Model unavailable', body: 'This model is no longer available. Pick another.', actions: ['openModelMenu', 'retry'] };
     case 'providerBusy':
       return { title: 'Busy right now', body: `${name} is busy right now. Wait a moment, then retry.`, actions: ['retry'] };
     case 'requestTooLarge':
@@ -63,9 +64,12 @@ export function chatErrorCopy(cls: ChatErrorClass, provider: ProviderId, extra: 
 /** Footer lines for answers that did not finish normally. */
 export const FOOTER = {
   stopped: 'Stopped',
-  /** Stop pressed before the first word arrived: there is no partial to keep (a real-Chrome check). */
+  /** Stop pressed before the first word arrived: there is no partial to keep. */
   stoppedEmpty: 'Stopped before anything arrived.',
   interrupted: 'Interrupted',
   cutOff: 'Answer was cut off',
+  // Cut off with nothing to continue, so the footer offers Retry and says which.
+  cutOffEmpty: 'The answer was cut off before it began',
+  cutOffPicture: 'The picture was cut off before it was finished',
   declined: 'The model declined to answer',
 } as const;

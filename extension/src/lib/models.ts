@@ -2,7 +2,8 @@
 // registry knows labels, roles, limits, and request-rule families; the
 // provider's live list-models call decides what actually appears, so retired
 // models disappear on their own and Fable-tier models never appear.
-// Ids and limits verified 2026-09-03; re-verify when this file changes.
+// Ids and limits last checked against the providers' docs in September 2026;
+// re-verify them when this file changes.
 
 export type ProviderId = 'anthropic' | 'openai' | 'google';
 
@@ -16,7 +17,7 @@ export function providerName(provider: ProviderId): string {
 export type ModelRole = 'default' | 'mostCapable' | 'fastest' | 'newest' | 'more';
 
 export type RequestFamily =
-  | 'anthropic-5' // Sonnet 5, Opus 5, Opus 4.8: adaptive thinking, output_config.effort
+  | 'anthropic-5' // Sonnet 5, Opus 5.5, Opus 5, Opus 4.8: adaptive thinking, output_config.effort
   | 'anthropic-4.6' // Sonnet 4.6: explicit thinking, sampling params allowed
   | 'anthropic-haiku' // Haiku 4.5: no effort control
   | 'openai-5.6' // effort none/low/medium/high/xhigh/max
@@ -37,6 +38,8 @@ export interface ModelSpec {
   family: RequestFamily;
   /** The live list returns dated ids for this one; match by prefix. */
   matchByPrefix?: boolean;
+  /** Takes this role in the picker when the key's saved list has no model holding it (a list saved before the model that holds it existed). */
+  fallbackRole?: ModelRole;
 }
 
 const M = 1_000_000;
@@ -44,7 +47,11 @@ const M = 1_000_000;
 export const REGISTRY: Record<ProviderId, readonly ModelSpec[]> = {
   anthropic: [
     { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', role: 'default', contextWindow: M, maxInputTokens: M, family: 'anthropic-5' },
-    { id: 'claude-opus-5', label: 'Claude Opus 5', role: 'mostCapable', contextWindow: M, maxInputTokens: M, family: 'anthropic-5' },
+    // Opus 5.5: the same 1M window and request surface as Opus 5, at a lower
+    // price. It rejects a disabled `thinking` and forced tool use, neither of which is sent.
+    { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', role: 'mostCapable', contextWindow: M, maxInputTokens: M, family: 'anthropic-5' },
+    // A key checked before Opus 5.5 existed has a saved list without it; there Opus 5 stays Most capable.
+    { id: 'claude-opus-5', label: 'Claude Opus 5', role: 'more', fallbackRole: 'mostCapable', contextWindow: M, maxInputTokens: M, family: 'anthropic-5' },
     { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', role: 'fastest', contextWindow: 200_000, maxInputTokens: 200_000, family: 'anthropic-haiku', matchByPrefix: true },
     { id: 'claude-opus-4-8', label: 'Claude Opus 4.8', role: 'more', contextWindow: M, maxInputTokens: M, family: 'anthropic-5' },
     { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', role: 'more', contextWindow: M, maxInputTokens: M, family: 'anthropic-4.6' },
@@ -87,8 +94,8 @@ export function findSpec(provider: ProviderId, id: string): ModelSpec | undefine
 
 export const ROLE_LABEL: Record<Exclude<ModelRole, 'more'>, string> = {
   default: 'Recommended for most flows',
-  mostCapable: 'Most capable — slower and costs more',
-  fastest: 'Fastest and cheapest — small flows only',
+  mostCapable: 'Most capable — best for complex flows',
+  fastest: 'Fast and cheap — small flows only',
   newest: 'Newest',
 };
 
@@ -187,6 +194,15 @@ export function buildPicker(provider: ProviderId, live: LiveModel[], flowTokens:
       family: spec?.family ?? 'unknown',
       tooSmall: flowTokens !== null && flowTokens > maxInputTokens,
     });
+  }
+  // A role no listed model holds goes to the model that stands in for it (see fallbackRole).
+  const held = new Set(items.map((i) => i.role));
+  for (const item of items) {
+    const standIn = findSpec(provider, item.id)?.fallbackRole;
+    if (standIn && !held.has(standIn)) {
+      item.role = standIn;
+      held.add(standIn);
+    }
   }
   const byRole = (a: PickerItem, b: PickerItem) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role);
   const recommended = items.filter((i) => i.role !== 'more').sort(byRole);

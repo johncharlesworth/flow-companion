@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import { expect, test } from './extension.fixture';
 import { readStorage, seedReadyKey } from './salesforce.mock';
 
@@ -35,15 +37,16 @@ test('with a key, the demo tab still plays recorded answers and sends nothing an
   await expect(demo.getByText('Saved just now')).toBeVisible();
   await expect(demo.getByRole('status').filter({ hasText: 'This is a demo flow.' })).toHaveText(/^This is a demo flow\. The four actions below play real answers, recorded from .+\.$/);
   await expect(demo.getByText('Try one of the four')).toBeVisible();
-  await expect(demo.getByText('Ready. Ask anything about this flow.')).toHaveCount(0);
+  await expect(demo.getByText('Ask anything about this flow.')).toHaveCount(0);
   await expect(demo.getByText('Questions to try')).toHaveCount(0);
 
-  // The message box is off and says where to go; with a key there is no setup link, so Send is alone on the bottom row. No model menu, no plus, no gauge.
+  // The message box is off and says where to go; with a key there is no setup link, so Send is alone on the bottom row. No Actions, no model menu, no gauge.
   await expect(demo.getByLabel('Message')).toBeDisabled();
   await expect(demo.getByLabel('Message')).toHaveAttribute('placeholder', 'Your API key has been accepted. Open a flow in Flow Builder to ask your own questions.');
   await expect(demo.getByRole('button', { name: 'Send' })).toBeDisabled();
   await expect(demo.getByRole('button', { name: 'Set up your AI' })).toHaveCount(0);
-  await expect(demo.getByRole('button', { name: 'Quick actions' })).toHaveCount(0);
+  await expectSendAtTheRight(demo);
+  await expect(demo.getByRole('button', { name: 'Actions' })).toHaveCount(0);
   await expect(demo.getByRole('button', { name: /Claude Sonnet 5/ })).toHaveCount(0);
   await expect(demo.getByRole('button', { name: /^About this flow: / })).toHaveCount(0);
   await expect(demo.locator('svg.lucide-gauge')).toHaveCount(0);
@@ -57,7 +60,7 @@ test('with a key, the demo tab still plays recorded answers and sends nothing an
   expect(afterOverview.turns[1]?.stopReason).toBe('end');
   expect(afterOverview.turns[1]?.displayText.trim().length).toBeGreaterThan(0);
   expect(await readStorage(serviceWorker, DEMO_CHAT_KEY)).toBeUndefined();
-  await expect(demo.getByRole('group', { name: 'Try another action' }).getByRole('button')).toHaveText(['Overview', 'Explain an element', 'Document this flow', 'Draw this flow']);
+  await expect(demo.getByRole('group', { name: 'Try another action' }).getByRole('button')).toHaveText(['Overview', 'Draw this flow', 'Document this flow', 'Explain an element']);
 
   expect(offMachine).toEqual([]);
 });
@@ -97,11 +100,11 @@ test('with no key, the demo tab plays recorded answers for the actions and sends
   await expect(demo.getByText('Try one of the four')).toBeVisible();
   await expect(demo.getByText('Questions to try')).toHaveCount(0);
 
-  // The message box is off; the banner says why, and the bottom row carries one link beside Send. No plus (the cards and the chip row hold the actions) and no gauge (nothing is sent).
+  // The message box is off; the banner says why, and the bottom row carries one link beside Send. No Actions (the cards and the chip row hold the actions) and no gauge (nothing is sent).
   await expect(demo.getByLabel('Message')).toBeDisabled();
   await expect(demo.getByLabel('Message')).toHaveAttribute('aria-describedby', 'sample-flow-banner');
   await expect(demo.getByRole('button', { name: 'Send' })).toBeDisabled();
-  await expect(demo.getByRole('button', { name: 'Quick actions' })).toHaveCount(0);
+  await expect(demo.getByRole('button', { name: 'Actions' })).toHaveCount(0);
   await expect(demo.getByRole('button', { name: /^About this flow: / })).toHaveCount(0);
   await expect(demo.locator('svg.lucide-gauge')).toHaveCount(0);
   await expect(demo.getByText('Your own questions need an API key.')).toHaveCount(0);
@@ -110,6 +113,7 @@ test('with no key, the demo tab plays recorded answers for the actions and sends
   const [linkBox, sendBox] = [await setUp.boundingBox(), await demo.getByRole('button', { name: 'Send' }).boundingBox()];
   expect(linkBox && sendBox && linkBox.x + linkBox.width <= sendBox.x + 1).toBe(true); // to the left of Send
   expect(linkBox && sendBox && Math.abs(linkBox.y + linkBox.height / 2 - (sendBox.y + sendBox.height / 2)) < 4).toBe(true); // on the same row
+  await expectSendAtTheRight(demo);
 
   // Overview: the recorded answer streams in and the turn completes.
   const tryAnother = demo.getByRole('group', { name: 'Try another action' });
@@ -117,7 +121,7 @@ test('with no key, the demo tab plays recorded answers for the actions and sends
   await demo.getByRole('button', { name: 'Overview' }).click();
   await expect(demo.getByRole('button', { name: 'Stop' })).toBeVisible(); // playing
   // The four actions stay in sight over the message box, waiting while the answer plays.
-  await expect(tryAnother.getByRole('button')).toHaveText(['Overview', 'Explain an element', 'Document this flow', 'Draw this flow']);
+  await expect(tryAnother.getByRole('button')).toHaveText(['Overview', 'Draw this flow', 'Document this flow', 'Explain an element']);
   await expect(tryAnother.getByRole('button', { name: 'Document this flow' })).toBeDisabled();
   // The question's pill alone: the answer's own words are not this test's to match.
   await expect(demo.getByRole('log').locator('span.rounded-pill', { hasText: /^Overview$/ })).toBeVisible();
@@ -160,7 +164,6 @@ test('with no key, the demo tab plays recorded answers for the actions and sends
   await demo.getByRole('option', { name: /CheckCustomerType/ }).click();
   await expect(demo.getByRole('log').locator('span.rounded-pill', { hasText: /^Explain$/ })).toBeVisible();
   await expect(demo.getByRole('log').locator('span.rounded-pill', { hasText: /^CheckCustomerType$/ })).toBeVisible();
-  await expect(demo.getByRole('button', { name: /^Remove CheckCustomerType/ })).toHaveCount(0); // nothing attached to the message box
   await expect(demo.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 20_000 });
   const afterExplain = (await readStorage(serviceWorker, RECORDED_CHAT_KEY)) as { turns: StoredTurn[] };
   expect(afterExplain.turns.map((t) => t.role)).toEqual(['user', 'assistant']);
@@ -189,3 +192,14 @@ test('with no key, "See it on a demo flow first" on the gate opens the demo in a
   await expect(demo.getByText('Try one of the four')).toBeVisible();
   await expect(panel.getByRole('heading', { level: 2 })).toHaveText('Set up your AI'); // the panel itself stays where it was
 });
+
+/**
+ * Send sits at the right of the box, as in the live row, and the placeholder is
+ * not dimmed: the box is off, but its placeholder names the next step.
+ */
+async function expectSendAtTheRight(demo: Page) {
+  const message = demo.getByLabel('Message');
+  const [box, send] = [await message.locator('..').boundingBox(), await demo.getByRole('button', { name: 'Send' }).boundingBox()];
+  expect(box!.x + box!.width - (send!.x + send!.width)).toBeCloseTo(11.5, 0);
+  expect(await message.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+}

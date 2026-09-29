@@ -18,12 +18,12 @@ export const RESPONSE_CONTRACTS: Record<Exclude<ChatMode, 'ask' | 'draw'>, strin
  * for a narrow panel, every node a real element or outcome. The variant sentence
  * sets the audience; the rules are shared.
  */
-const DRAW_RULES = `Answer with exactly one \`\`\`mermaid code block containing a flowchart TD, then two or three sentences on what the picture shows. Diagram rules: every box or diamond corresponds to a real element or decision outcome in the flow, nothing invented; node ids are short identifiers such as A, B, C1 with the label in double quotes, for example A["Checks the account type"]; decisions are diamonds, for example B{"Enterprise account?"}; an edge may carry a short outcome label in pipes, for example B -->|Yes| C; no subgraphs, no HTML in labels, no parentheses, quotes, or semicolons inside labels. An outcome or element with no connector simply has no outgoing edge; never add a placeholder box for a missing target.`;
+const DRAW_RULES = `Answer with exactly one \`\`\`mermaid code block containing a flowchart TD, then two or three sentences on what the picture shows. Diagram rules: every box or diamond corresponds to a real element or decision outcome in the flow, or to a group of them where the instructions below allow one, nothing invented; node ids are short identifiers such as A, B, C1 with the label in double quotes, for example A["Checks the account type"]; decisions are diamonds, for example B{"Enterprise account?"}; an edge may carry a short outcome label in pipes, for example B -->|Yes| C; no subgraphs, no HTML in labels, no parentheses, quotes, or semicolons inside labels. An outcome or element with no connector simply has no outgoing edge; never add a placeholder box for a missing target.`;
 
 const DRAW_VARIANT_RULE: Record<DrawVariant, string> = {
   business: 'Pitch it at a business reader: 8 to 15 nodes in total, counting every box and diamond, plain-language labels, no API names. When the flow has more steps than that, merge consecutive checks or steps into one box rather than adding nodes, so the main paths stay clear.',
-  admins: 'Show every element by its API name, one node per element in execution order, with each decision outcome as an edge label and fault paths as edges labelled Fault.',
-  fromElement: 'Draw the element in <focus_element> and what surrounds it: the elements that lead into it, the element itself, and where each of its outcomes goes, following each path for two or three elements and stopping where paths rejoin or the flow ends. One node per element, labelled by API name, each decision outcome as an edge label. Do not draw the rest of the flow.',
+  admins: 'Show every element by its API name, one node per element in execution order, with each decision outcome as an edge label and fault paths as edges labelled Fault. Draw every element however many there are, including any that nothing leads to, drawn apart from the rest; the user chose this picture knowing its size, so never offer a smaller one instead.',
+  fromElement: 'Draw the element in <focus_element> and what surrounds it: the elements that lead into it, the element itself, and where each of its outcomes goes, following each path for two or three elements and stopping where paths rejoin or the flow ends. One node per element, labelled by API name, each decision outcome as an edge label. When more than five elements lead straight into it and they are the same type of element doing the same job, draw them as one box that says how many there are and what they do, for example A["39 assignments that set the case fields"], rather than a box each; never group elements of different types, a decision with anything else, or elements that lead to different places. Do not draw the rest of the flow.',
 };
 
 export function drawContract(variant: DrawVariant): string {
@@ -39,12 +39,18 @@ export const DEFAULT_QUESTION: Record<ChatMode, string> = {
 };
 
 /**
- * Starter questions in the quick-actions menu (Ask, not a formal action): the
- * questions an admin should be asking and may not think to (three added
- * in a real-Chrome check). Plain words; the edits
- * rule governs the answers.
+ * Starter questions under "Questions to try" on the empty chat (Ask, not a formal action): the
+ * questions an admin should be asking and may not think to. Plain words; the
+ * edits rule governs the answers.
  */
-export const STARTER_QUESTIONS = ['Walk me through the main logic', 'What would you simplify, and why?', 'Where could this flow go wrong?', 'What should someone know before changing this flow?'] as const;
+export const STARTER_QUESTIONS = [
+  'Walk me through the main logic',
+  'Explain this flow to a non-technical CEO',
+  'What would you simplify, and why?',
+  'What would you improve about this flow?',
+  'Where could this flow go wrong?',
+  'What should someone know before changing this flow?',
+] as const;
 
 export const PREFERENCES_MAX = 1_500;
 
@@ -99,9 +105,18 @@ export function assembleUserTurn({ mode, variant = 'business', question, focusEl
   return { sentText: parts.join('\n'), displayText: typed };
 }
 
-/** Output reservation per turn. */
-export function maxOutputTokensFor(mode: ChatMode): number {
-  return mode === 'document' ? 48_000 : 16_000;
+/** Families that think before they write, where the thinking is spent from the same allowance as the answer. */
+const THINKS_FIRST = new Set(['anthropic-5', 'openai-5.6', 'openai-5']);
+
+/**
+ * Output reservation per turn. A model that thinks first spends this allowance on its thinking too, so it
+ * gets four times the room (capped at 128,000, these models' own ceiling): at 16,000, Claude Sonnet 5
+ * can spend all of it thinking about a 149-element flow and be cut off before its first word. A
+ * ceiling, not a spend: only what the model writes is billed.
+ */
+export function maxOutputTokensFor(mode: ChatMode, family = 'unknown'): number {
+  const base = mode === 'document' ? 48_000 : 16_000;
+  return THINKS_FIRST.has(family) ? Math.min(base * 4, 128_000) : base;
 }
 
 /** Document answers cap OpenAI reasoning at medium. */

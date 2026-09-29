@@ -1,15 +1,15 @@
-import { ArrowDown, Check, Copy, Download, ExternalLink, Waypoints } from 'lucide-react';
+import { ArrowDown, Check, Copy, Download, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { ChatTurn } from '@/hooks/useChatStream';
-import { type ChatErrorAction, chatErrorCopy, FOOTER } from '@/lib/chat-errors';
 import { cn } from '@/lib/cn';
+import { latestAnswerIndex } from '@/lib/chat-history';
+import { type ChatErrorAction, chatErrorCopy, FOOTER } from '@/lib/chat-errors';
 import { copyDiagramForExcalidraw, EXCALIDRAW_URL, excalidrawHint, excalidrawInstruction, type ExcalidrawRoute, MERMAID_COPY_LINK, MERMAID_COPY_TAIL } from '@/lib/excalidraw-export';
-import { checkIdentifiers, cleanMermaid, extractMermaid } from '@/lib/mermaid-text';
+import { checkIdentifiers, cleanMermaid, extractMermaid, hasOpenMermaidFence } from '@/lib/mermaid-text';
 import type { ChatMode, DrawVariant } from '@/lib/modes';
 import { type ProviderId, providerName } from '@/lib/models';
 
-import { Chip } from './Chip';
 import type { DiagramHandlers } from './FlowDiagram';
 import { NoticeRow } from './NoticeRow';
 import { SanitizedMarkdown } from './SanitizedMarkdown';
@@ -20,8 +20,6 @@ import { Tip } from './ui/tooltip';
 export const DIAGRAM_FOOTER = (provider: string, variant?: DrawVariant) =>
   `${variant === 'admins' ? 'Drawn' : 'A simplified picture, drawn'} by ${provider} from the saved version. Check the details in Flow Builder before you rely on it.`;
 export const UNKNOWN_NAMES = (names: string[]) => `Names not in this flow: ${names.join(', ')}.`;
-/** The follow-up chips: the verb says they draw again (a real-Chrome check). */
-export const DRAW_CHIP = { admins: 'Draw every element', fromElement: 'Draw one element…' } as const;
 
 export interface TranscriptProps {
   turns: ChatTurn[];
@@ -36,19 +34,23 @@ export interface TranscriptProps {
   onDownloadDocument: (markdown: string) => void;
   /** Try again under a diagram that would not draw: re-sends the last question. */
   onRedo: () => void;
-  /** The follow-up chips under a drawn diagram; without it the chips are not shown. */
-  onDrawFollowUp?: (variant: keyof typeof DRAW_CHIP) => void;
   /** The flow's saved metadata, for the "names not in this flow" note. */
   flowMetadata: unknown;
+  /** The flow will not fit the chosen model, so a Retry would stop at the gate: it is not offered. */
+  sendBlocked?: boolean;
+  /** After "Jump to latest": the button unmounts, so focus is handed on rather than dropped. `pointer` is false for a keyboard press. */
+  onJumped?: (pointer: boolean) => void;
 }
 
 const MODE_PILL: Record<string, string> = { overview: 'Overview', explain: 'Explain', document: 'Document', draw: 'Draw' };
 
-export function Transcript({ turns, status, provider, currentModelLabel, suggestedModelLabel, onRetry, onContinue, onErrorAction, onDownloadDocument, onRedo, onDrawFollowUp, flowMetadata }: TranscriptProps) {
+export function Transcript({ turns, status, provider, currentModelLabel, suggestedModelLabel, onRetry, onContinue, onErrorAction, onDownloadDocument, onRedo, flowMetadata, sendBlocked = false, onJumped }: TranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
-  // Whether each draw answer's diagram rendered; the bar and chips wait for it.
+  // Whether each draw answer's diagram rendered; the bar waits for it.
   const [drawn, setDrawn] = useState<Record<string, 'rendered' | 'failed'>>({});
+  // Bumped when a drawn picture changes size after it drew (a wide one's "too big" line, or the panel's width changing).
+  const [resized, setResized] = useState(0);
   const lastAnswer = turns.filter((t) => t.role === 'assistant').at(-1);
   const lastText = lastAnswer?.displayText ?? '';
 
@@ -59,6 +61,15 @@ export function Transcript({ turns, status, provider, currentModelLabel, suggest
     if (atBottom) el.scrollTop = el.scrollHeight;
   }, [turns, lastText, status, atBottom]);
 
+  // A picture draws after its answer has finished, so the conversation grows with no scroll
+  // event: check again once it has, so "Jump to latest" appears when the bar under it (Open in
+  // Excalidraw) is out of sight, rather than leaving the view parked above it.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 24);
+  }, [drawn, resized]);
+
+  const latest = latestAnswerIndex(turns);
   const announce = status === 'idle' && lastAnswer && !lastAnswer.interrupted && lastAnswer.displayText ? 'Answer finished' : '';
 
   const onScroll = () => {
@@ -73,40 +84,47 @@ export function Transcript({ turns, status, provider, currentModelLabel, suggest
         {turns.map((turn, index) => {
           if (turn.role === 'notice') return <NoticeRow key={turn.id}>{turn.displayText}</NoticeRow>;
           if (turn.role === 'user') return <UserBubble key={turn.id} turn={turn} />;
-          const isLast = index === turns.length - 1;
-          const streaming = isLast && status === 'streaming';
+          // The latest answer, not the last line: a note after it ("Switched to …") must not make it read as finished or earlier.
+          const isLatest = index === latest;
+          const streaming = isLatest && status === 'streaming';
           const question = turns[index - 1];
           const isDocument = question?.role === 'user' && question.mode === 'document';
-          // Any answer with a diagram gets the footer, the bar, and the chips, whether it came from the Draw button or a typed request.
+          // Any answer with a diagram gets the footer and the bar, whether it came from the Draw button or a typed request.
           const drawQuestion = question?.role === 'user' && question.mode === 'draw' ? question : null;
           const mermaid = !streaming ? extractMermaid(turn.displayText) : null;
           const diagram: DiagramHandlers = {
             onOutcome: (outcome) => setDrawn((prev) => (prev[turn.id] === outcome ? prev : { ...prev, [turn.id]: outcome })),
-            onTryAgain: isLast && status === 'idle' ? onRedo : undefined,
+            onTryAgain: isLatest && status === 'idle' ? onRedo : undefined,
+            onResize: () => setResized((n) => n + 1),
           };
           return (
             <div key={turn.id} className="mb-4">
-              {isLast && status === 'waiting' && <Waiting mode={question?.role === 'user' ? question.mode : undefined} />}
+              {isLatest && status === 'waiting' && <Waiting mode={question?.role === 'user' ? question.mode : undefined} />}
               {turn.displayText && <SanitizedMarkdown markdown={turn.displayText} streaming={streaming} diagram={diagram} />}
               {mermaid && drawn[turn.id] === 'rendered' && (
-                <DiagramBar text={cleanMermaid(mermaid)} provider={providerName(provider)} flowMetadata={flowMetadata} variant={drawQuestion?.variant} onFollowUp={onDrawFollowUp} />
+                <DiagramBar text={cleanMermaid(mermaid)} provider={providerName(provider)} flowMetadata={flowMetadata} variant={drawQuestion?.variant} />
               )}
-              {!streaming && !(isLast && status === 'waiting') && (
-                <AnswerFooter turn={turn} provider={provider} currentModelLabel={currentModelLabel} suggestedModelLabel={suggestedModelLabel} onRetry={onRetry} onContinue={onContinue} onErrorAction={onErrorAction} />
+              {!streaming && !(isLatest && status === 'waiting') && (
+                <AnswerFooter turn={turn} canAct={isLatest && status === 'idle' && !sendBlocked} idle={status === 'idle'} provider={provider} currentModelLabel={currentModelLabel} suggestedModelLabel={suggestedModelLabel} onRetry={onRetry} onContinue={onContinue} onRedo={onRedo} onErrorAction={onErrorAction} />
               )}
               {!streaming && isDocument && turn.stopReason && turn.displayText && <DocumentBar markdown={turn.displayText} onDownload={() => onDownloadDocument(turn.displayText)} />}
-              {turn.reread && !streaming && <NoticeRow>{`${providerName(provider)} re-read the whole flow for that question, so it cost more. Follow-ups reuse it again.`}</NoticeRow>}
             </div>
           );
         })}
       </div>
+      {/* The scroll fades into the panel rather than stopping at a hard edge, so a
+          long answer reads as continuing above the message box. Decorative and
+          click-through, and it comes BEFORE "Jump to latest" in the DOM so that button
+          paints over it: both are positioned with no z-index, so the later one wins. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-bg to-transparent" />
       {!atBottom && (
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
             setAtBottom(true);
             const el = scrollRef.current;
             if (el) el.scrollTop = el.scrollHeight;
+            onJumped?.(e.detail > 0);
           }}
           className="absolute bottom-2 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-pill bg-surface-elevated px-3 py-1 text-xs text-text-1 shadow-elevated"
         >
@@ -124,14 +142,20 @@ function UserBubble({ turn }: { turn: ChatTurn }) {
   const pill = turn.mode && turn.mode !== 'ask' ? MODE_PILL[turn.mode] : null;
   return (
     <div className="mb-4 flex justify-end">
-      <div className="max-w-[62ch] rounded-composer bg-surface px-3 py-2 text-[14px] text-text-1">
+      {/* min-w-0: a flex item will not shrink below its content otherwise, and a long unbroken name would push the bubble off the panel's left edge. */}
+      <div className="min-w-0 max-w-[62ch] rounded-composer bg-surface px-3 py-2 text-[14px] text-text-1">
         {(pill || turn.focusElement) && (
           <span className="mb-1 flex flex-wrap items-center gap-1.5">
             {pill && <span className="rounded-pill bg-accent px-2 py-0.5 text-[11px] font-medium text-accent-fg">{pill}</span>}
-            {turn.focusElement && <span className="rounded-pill border border-hairline px-2 py-0.5 font-mono text-[11px] text-text-2">{turn.focusElement}</span>}
+            {/* A long API name ends in an ellipsis here, with the whole name on hover; the answer below names it in full. */}
+            {turn.focusElement && (
+              <span title={turn.focusElement} className="min-w-0 max-w-full truncate rounded-pill border border-hairline px-2 py-0.5 font-mono text-[11px] text-text-2">
+                {turn.focusElement}
+              </span>
+            )}
           </span>
         )}
-        {turn.displayText && <span className="whitespace-pre-wrap">{turn.displayText}</span>}
+        {turn.displayText && <span className="whitespace-pre-wrap wrap-anywhere">{turn.displayText}</span>}
       </div>
     </div>
   );
@@ -139,9 +163,8 @@ function UserBubble({ turn }: { turn: ChatTurn }) {
 
 /**
  * Before the first token. A draw or a document says so, and after 20 seconds
- * says how long it can take (a real-Chrome check: 45
- * quiet seconds before a picture, and two minutes before a document, read as
- * a bug without a word about it).
+ * says how long it can take: 45 quiet seconds before a picture, or two
+ * minutes before a document, reads as a bug without a word about it.
  */
 export const WAITING = {
   thinking: 'Thinking…',
@@ -174,7 +197,9 @@ function Waiting({ mode }: { mode?: ChatMode }) {
   );
 }
 
-function AnswerFooter({ turn, provider, currentModelLabel, suggestedModelLabel, onRetry, onContinue, onErrorAction }: { turn: ChatTurn; provider: ProviderId; currentModelLabel: string; suggestedModelLabel?: string | null; onRetry: () => void; onContinue: () => void; onErrorAction: (a: ChatErrorAction) => void }) {
+// `canAct`: this is the latest answer and nothing is arriving. Retry and Continue act on the latest answer only, so under
+// an earlier one they would do nothing (or continue the wrong answer); there the footer keeps its words and drops the link.
+function AnswerFooter({ turn, canAct, idle, provider, currentModelLabel, suggestedModelLabel, onRetry, onContinue, onRedo, onErrorAction }: { turn: ChatTurn; canAct: boolean; idle: boolean; provider: ProviderId; currentModelLabel: string; suggestedModelLabel?: string | null; onRetry: () => void; onContinue: () => void; onRedo: () => void; onErrorAction: (a: ChatErrorAction) => void }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -188,12 +213,19 @@ function AnswerFooter({ turn, provider, currentModelLabel, suggestedModelLabel, 
   let label: string | null = null;
   if (turn.interrupted === 'stopped') label = turn.displayText ? FOOTER.stopped : FOOTER.stoppedEmpty;
   else if (turn.interrupted === 'error') label = FOOTER.interrupted;
-  else if (turn.stopReason === 'max_tokens') label = FOOTER.cutOff;
+  else if (turn.stopReason === 'max_tokens') label = !turn.displayText.trim() ? FOOTER.cutOffEmpty : hasOpenMermaidFence(turn.displayText) ? FOOTER.cutOffPicture : FOOTER.cutOff;
   else if (turn.stopReason === 'refusal') label = FOOTER.declined;
   const error = turn.interrupted === 'error' && turn.error ? chatErrorCopy(turn.error.class, provider, { tooBigFor: currentModelLabel, fits: suggestedModelLabel ?? null }) : null;
   // A hydrated interrupted answer (panel closed or tab switched mid-stream) has no
   // error class, so the footer carries Retry; when a class is known, its card does.
   const showRetry = turn.interrupted === 'error' && !error;
+  // Retry acts on the latest answer only; a model can be picked only while nothing is arriving
+  // (otherwise an earlier card's "Open model menu" would reopen the menu mid-answer, past the chip that is off).
+  const actions = (error?.actions ?? []).filter((action) => (action === 'retry' ? canAct : action === 'openModelMenu' || action === 'switchModel' ? idle : true));
+  // Continue asks for the rest in a second answer. With nothing written (the model spent its whole allowance
+  // thinking), it would send "Continue." in place of the question, which is dropped with its empty answer; and
+  // half a picture never joins the other half. Both get Retry, which asks the question again.
+  const continuable = turn.displayText.trim() !== '' && !hasOpenMermaidFence(turn.displayText);
 
   return (
     <div className="mt-1 flex flex-col gap-1">
@@ -206,20 +238,30 @@ function AnswerFooter({ turn, provider, currentModelLabel, suggestedModelLabel, 
           </Tip>
         )}
         {label && <span>{label}</span>}
-        {showRetry && <FooterLink onClick={onRetry}>Retry</FooterLink>}
-        {turn.stopReason === 'max_tokens' && <FooterLink onClick={onContinue}>Continue</FooterLink>}
+        {showRetry && canAct && <FooterLink onClick={onRetry}>Retry</FooterLink>}
+        {turn.stopReason === 'max_tokens' && canAct && (continuable ? <FooterLink onClick={onContinue}>Continue</FooterLink> : <FooterLink onClick={onRedo}>Retry</FooterLink>)}
       </div>
       {error && (
         <div className="rounded-composer bg-surface px-3 py-2 text-[14px]" role="alert">
           <p className="font-medium text-text-1">{error.title}</p>
           <p className="text-text-2">{error.body}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {error.actions.map((action) => (
-              <Button key={action} variant={action === 'retry' || action === 'switchModel' ? 'primary' : 'ghost'} className={cn(action !== 'retry' && action !== 'switchModel' && 'text-accent')} onClick={() => (action === 'retry' ? onRetry() : onErrorAction(action))}>
-                {ACTION_LABEL(action, provider, suggestedModelLabel)}
-              </Button>
-            ))}
-          </div>
+          {/* No row at all when nothing is left in it (an earlier card whose only action was Retry). */}
+          {actions.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {actions.map((action, index) => (
+                <Button
+                  key={action}
+                  variant={action === 'retry' || action === 'switchModel' ? 'primary' : 'link'}
+                  size={action === 'retry' || action === 'switchModel' ? 'md' : 'link'}
+                  // A link that leads the row lines its words up with the card's text; its 7px of padding shows only on hover, inside the card.
+                  className={cn(index === 0 && action !== 'retry' && action !== 'switchModel' && '-ml-[7px]')}
+                  onClick={() => (action === 'retry' ? onRetry() : onErrorAction(action))}
+                >
+                  {ACTION_LABEL(action, provider, suggestedModelLabel)}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -259,7 +301,8 @@ function FooterLink({ onClick, children }: { onClick: () => void; children: stri
 function DocumentBar({ markdown, onDownload }: { markdown: string; onDownload: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="mt-2 flex items-center gap-2 rounded-composer bg-surface px-3 py-2">
+    // The same card as under a picture: the tint, 14px inside.
+    <div className="mt-2 flex items-center gap-2 rounded-composer bg-surface-tint p-[14px]">
       <Button
         onClick={() => {
           void navigator.clipboard.writeText(markdown).then(() => {
@@ -279,8 +322,9 @@ function DocumentBar({ markdown, onDownload }: { markdown: string; onDownload: (
   );
 }
 
-/** Footer, Open in Excalidraw with its one line, and the two follow-up chips under a rendered diagram (the chips only when there is somewhere to send them). */
-function DiagramBar({ text, provider, flowMetadata, variant, onFollowUp }: { text: string; provider: string; flowMetadata: unknown; variant?: DrawVariant; onFollowUp?: (variant: keyof typeof DRAW_CHIP) => void }) {
+/** Footer, and Open in Excalidraw with its one line, under a rendered diagram. */
+// The other two pictures (every element, one element) are in the Actions menu, not under each picture.
+function DiagramBar({ text, provider, flowMetadata, variant }: { text: string; provider: string; flowMetadata: unknown; variant?: DrawVariant }) {
   const [hint, setHint] = useState<ExcalidrawRoute | null>(null);
   const [opening, setOpening] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -308,12 +352,14 @@ function DiagramBar({ text, provider, flowMetadata, variant, onFollowUp }: { tex
     }
   };
   return (
-    <div className="mt-2 flex flex-col gap-2">
+    // 16px above the note, 14px to the card, 14px inside it, on the tint rather than white, which would compete with
+    // the message box below.
+    <div className="mt-[16px] flex flex-col gap-[14px]">
       <p className="text-xs text-text-3">
         {DIAGRAM_FOOTER(provider, variant)}
         {unknown.length > 0 && <> {UNKNOWN_NAMES(unknown)}</>}
       </p>
-      <div className="flex flex-wrap items-center gap-2 rounded-composer bg-surface px-3 py-2">
+      <div className="flex flex-wrap items-center gap-[10px] rounded-composer bg-surface-tint p-[14px]">
         <Button onClick={() => void openInExcalidraw()} disabled={opening}>
           <ExternalLink className="h-4 w-4" aria-hidden="true" /> Open in Excalidraw
         </Button>
@@ -330,18 +376,6 @@ function DiagramBar({ text, provider, flowMetadata, variant, onFollowUp }: { tex
           </span>
         )}
       </div>
-      {onFollowUp && (
-        <div className="flex flex-wrap gap-2">
-          {variant !== 'admins' && (
-            <Chip icon={<Waypoints className="h-4 w-4 text-accent" aria-hidden="true" />} onClick={() => onFollowUp('admins')}>
-              {DRAW_CHIP.admins}
-            </Chip>
-          )}
-          <Chip icon={<Waypoints className="h-4 w-4 text-accent" aria-hidden="true" />} onClick={() => onFollowUp('fromElement')}>
-            {DRAW_CHIP.fromElement}
-          </Chip>
-        </div>
-      )}
     </div>
   );
 }

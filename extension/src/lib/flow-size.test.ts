@@ -52,7 +52,7 @@ describe('reuse and length', () => {
   });
 });
 
-describe('the flow chip’s numbers', () => {
+describe('the gauge’s numbers', () => {
   it('the hover is one line: reuse on a follow-up, size on the first question; thousands separators; the provider named', () => {
     expect(hoverSummary({ inputTokens: 245_800, cachedInputTokens: 231_200, outputTokens: 1_400 }, 'anthropic')).toBe('Last question: 231,200 of 245,800 tokens reused from Anthropic’s memory');
     expect(hoverSummary({ inputTokens: 207_687, cachedInputTokens: 0, outputTokens: 1_360 }, 'google')).toBe('First question: 207,687 tokens sent, 1,360 in the answer');

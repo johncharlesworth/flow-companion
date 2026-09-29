@@ -1,6 +1,5 @@
-// Reads a Flow's last saved metadata through the Tooling API. Ported from the
-// earlier build build with the ids are validated before they
-// reach a query or a path, the whole Flow record comes back (not just
+// Reads a Flow's last saved metadata through the Tooling API. The ids are
+// validated before they reach a query or a path, the whole Flow record comes back (not just
 // Metadata), the FlowDefinition's active version is fetched for the header
 // tooltip, the Builder route with no ids is recognised as an unsaved flow,
 // non-flow URLs throw a typed error, and every call carries a timeout that

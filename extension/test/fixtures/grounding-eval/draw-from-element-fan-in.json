@@ -1,0 +1,814 @@
+{
+  "name": "draw-from-element-fan-in",
+  "category": "draw",
+  "note": "Draw one element around Create_Support_Case, which thirteen elements lead into: twelve alike assignments (one per region and team) and a decision. Drawn one box each, the twelve would sit in one row and make the picture unreadably wide. The contract groups alike elements that lead straight in, so the picture stays small; the decision Check_Existing_Case is a different type and must keep its own box. Every API-looking name in the picture must exist in the flow. The picture must give the decision a node of its own (a label that starts with its name) and a group box that carries the count, so a picture that grouped the decision in, or drew no group at all, fails.",
+  "flow": {
+    "label": "Support Case Intake",
+    "processType": "Flow",
+    "status": "Active",
+    "apiVersion": 62,
+    "interviewLabel": "Support Case Intake {!$Flow.CurrentDateTime}",
+    "description": "Synthetic fixture: twelve near-identical assignments, one per region and team, all lead straight into one record create.",
+    "start": {
+      "connector": {
+        "targetReference": "Check_Existing_Case"
+      },
+      "locationX": 50,
+      "locationY": 0
+    },
+    "decisions": [
+      {
+        "name": "Check_Existing_Case",
+        "label": "Check Existing Case",
+        "rules": [
+          {
+            "name": "No_Open_Case",
+            "label": "No Open Case",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Existing_Case_Id",
+                "operator": "IsNull",
+                "rightValue": {
+                  "booleanValue": true
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Route_By_Region_And_Team"
+            }
+          }
+        ],
+        "defaultConnector": {
+          "targetReference": "Create_Support_Case"
+        },
+        "defaultConnectorLabel": "Open case found"
+      },
+      {
+        "name": "Route_By_Region_And_Team",
+        "label": "Route By Region And Team",
+        "rules": [
+          {
+            "name": "AMER_Sales",
+            "label": "AMER Sales",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "AMER"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Sales"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_AMER_Sales"
+            }
+          },
+          {
+            "name": "AMER_Service",
+            "label": "AMER Service",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "AMER"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Service"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_AMER_Service"
+            }
+          },
+          {
+            "name": "AMER_Legal",
+            "label": "AMER Legal",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "AMER"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Legal"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_AMER_Legal"
+            }
+          },
+          {
+            "name": "EMEA_Sales",
+            "label": "EMEA Sales",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "EMEA"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Sales"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_EMEA_Sales"
+            }
+          },
+          {
+            "name": "EMEA_Service",
+            "label": "EMEA Service",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "EMEA"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Service"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_EMEA_Service"
+            }
+          },
+          {
+            "name": "EMEA_Legal",
+            "label": "EMEA Legal",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "EMEA"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Legal"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_EMEA_Legal"
+            }
+          },
+          {
+            "name": "APAC_Sales",
+            "label": "APAC Sales",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "APAC"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Sales"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_APAC_Sales"
+            }
+          },
+          {
+            "name": "APAC_Service",
+            "label": "APAC Service",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "APAC"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Service"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_APAC_Service"
+            }
+          },
+          {
+            "name": "APAC_Legal",
+            "label": "APAC Legal",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "APAC"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Legal"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_APAC_Legal"
+            }
+          },
+          {
+            "name": "LATAM_Sales",
+            "label": "LATAM Sales",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "LATAM"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Sales"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_LATAM_Sales"
+            }
+          },
+          {
+            "name": "LATAM_Service",
+            "label": "LATAM Service",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "LATAM"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Service"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_LATAM_Service"
+            }
+          },
+          {
+            "name": "LATAM_Legal",
+            "label": "LATAM Legal",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Region",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "LATAM"
+                }
+              },
+              {
+                "leftValueReference": "Team",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "Legal"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Assign_Case_Defaults_LATAM_Legal"
+            }
+          }
+        ],
+        "defaultConnector": {
+          "targetReference": "Assign_Case_Defaults_AMER_Sales"
+        },
+        "defaultConnectorLabel": "Default Outcome"
+      },
+      {
+        "name": "Needs_Escalation",
+        "label": "Needs Escalation",
+        "rules": [
+          {
+            "name": "Escalate",
+            "label": "Escalate",
+            "conditionLogic": "and",
+            "conditions": [
+              {
+                "leftValueReference": "Priority",
+                "operator": "EqualTo",
+                "rightValue": {
+                  "stringValue": "High"
+                }
+              }
+            ],
+            "connector": {
+              "targetReference": "Escalate_Case"
+            }
+          }
+        ],
+        "defaultConnector": {
+          "targetReference": "Show_Confirmation"
+        },
+        "defaultConnectorLabel": "Default Outcome"
+      }
+    ],
+    "assignments": [
+      {
+        "name": "Assign_Case_Defaults_AMER_Sales",
+        "label": "Assign Case Defaults AMER Sales",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "AMER_Sales_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "AMER"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Sales"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_AMER_Service",
+        "label": "Assign Case Defaults AMER Service",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "AMER_Service_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "AMER"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Service"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_AMER_Legal",
+        "label": "Assign Case Defaults AMER Legal",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "AMER_Legal_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "AMER"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Legal"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_EMEA_Sales",
+        "label": "Assign Case Defaults EMEA Sales",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "EMEA_Sales_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "EMEA"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Sales"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_EMEA_Service",
+        "label": "Assign Case Defaults EMEA Service",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "EMEA_Service_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "EMEA"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Service"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_EMEA_Legal",
+        "label": "Assign Case Defaults EMEA Legal",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "EMEA_Legal_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "EMEA"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Legal"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_APAC_Sales",
+        "label": "Assign Case Defaults APAC Sales",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "APAC_Sales_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "APAC"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Sales"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_APAC_Service",
+        "label": "Assign Case Defaults APAC Service",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "APAC_Service_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "APAC"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Service"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_APAC_Legal",
+        "label": "Assign Case Defaults APAC Legal",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "APAC_Legal_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "APAC"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Legal"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_LATAM_Sales",
+        "label": "Assign Case Defaults LATAM Sales",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "LATAM_Sales_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "LATAM"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Sales"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_LATAM_Service",
+        "label": "Assign Case Defaults LATAM Service",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "LATAM_Service_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "LATAM"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Service"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      },
+      {
+        "name": "Assign_Case_Defaults_LATAM_Legal",
+        "label": "Assign Case Defaults LATAM Legal",
+        "assignmentItems": [
+          {
+            "assignToReference": "NewCase.OwnerId",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "LATAM_Legal_Queue"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Region__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "LATAM"
+            }
+          },
+          {
+            "assignToReference": "NewCase.Team__c",
+            "operator": "Assign",
+            "value": {
+              "stringValue": "Legal"
+            }
+          }
+        ],
+        "connector": {
+          "targetReference": "Create_Support_Case"
+        }
+      }
+    ],
+    "recordCreates": [
+      {
+        "name": "Create_Support_Case",
+        "label": "Create Support Case",
+        "inputReference": "NewCase",
+        "connector": {
+          "targetReference": "Needs_Escalation"
+        }
+      }
+    ],
+    "recordUpdates": [
+      {
+        "name": "Escalate_Case",
+        "label": "Escalate Case",
+        "inputReference": "NewCase"
+      }
+    ],
+    "screens": [
+      {
+        "name": "Show_Confirmation",
+        "label": "Show Confirmation",
+        "fields": [
+          {
+            "name": "Confirmation_Text",
+            "fieldType": "DisplayText",
+            "fieldText": "Your case {!NewCase.CaseNumber} was created."
+          }
+        ]
+      }
+    ],
+    "variables": [
+      {
+        "name": "NewCase",
+        "dataType": "SObject",
+        "objectType": "Case",
+        "isInput": false,
+        "isOutput": false
+      },
+      {
+        "name": "Existing_Case_Id",
+        "dataType": "String",
+        "isInput": true,
+        "isOutput": false
+      },
+      {
+        "name": "Region",
+        "dataType": "String",
+        "isInput": true,
+        "isOutput": false
+      },
+      {
+        "name": "Team",
+        "dataType": "String",
+        "isInput": true,
+        "isOutput": false
+      },
+      {
+        "name": "Priority",
+        "dataType": "String",
+        "isInput": true,
+        "isOutput": false
+      }
+    ]
+  },
+  "userQuestion": "",
+  "mode": "draw",
+  "variant": "fromElement",
+  "focus": "Create_Support_Case",
+  "passMatchers": {
+    "diagram": {
+      "minNodes": 4,
+      "maxNodes": 10,
+      "identifiersInFlow": true,
+      "matches": [
+        "[\\[{]\"Check_Existing_Case",
+        "\"(12|twelve) "
+      ]
+    }
+  }
+}

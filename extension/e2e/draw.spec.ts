@@ -1,14 +1,15 @@
+
 import type { BrowserContext, Page } from '@playwright/test';
 
 import { expect, test } from './extension.fixture';
 import { installProviderMock, messageCalls, providerCalls } from './provider-mock';
-import { FLOW_A, FLOW_A_LABEL, mockSalesforce, seedReadyKey } from './salesforce.mock';
+import { DEFINITION_ID, FLOW_A, FLOW_A_LABEL, mockSalesforce, seedReadyKey, VERSION_ID } from './salesforce.mock';
 
-// Draw this flow in a real Chromium: the chip sends
+// Draw this flow in a real Chromium: the card sends
 // the draw contract and a mocked Mermaid answer renders as an SVG; the renderer
 // chunk is not loaded until then; Open in Excalidraw writes Excalidraw's paste payload, opens excalidraw.com (stubbed
-// here, nothing leaves the machine), and shows the hint; the follow-up chips
-// send their variants; a broken diagram shows the failure line and Try again
+// here, nothing leaves the machine), and shows the hint; the Actions menu
+// sends the other two pictures; a broken diagram shows the failure line and Try again
 // re-sends the same question.
 
 const DIAGRAM = '```mermaid\nflowchart TD\n  A["Account is updated"] --> B{"Enterprise account?"}\n  B -->|Yes| C["Update the account"]\n  B -->|No| D["Assign a follow-up owner"]\n  C --> E["Create a follow-up task"]\n  D --> E\n```\n\nThe flow branches once on the account type and always ends with a task.';
@@ -58,7 +59,7 @@ function lastUserText(body: unknown): string {
 }
 const loadedScripts = async (panel: Page, requests: string[]) => [...requests, ...(await panel.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name)))];
 
-test('the Draw chip sends the contract; the diagram renders as an SVG and only then loads the renderer; Open in Excalidraw works; the chips follow up', async ({ context, extensionId, serviceWorker }) => {
+test('the Draw chip sends the contract; the diagram renders as an SVG and only then loads the renderer; Open in Excalidraw works; the menu draws the other two', async ({ context, extensionId, serviceWorker }) => {
   await prepare(context);
   await installProviderMock(context, { answers: [{ chunks: DIAGRAM.split(/(?<=\n)/), delayMs: 15 }, { chunks: [EVERY], delayMs: 10 }, { chunks: [DIAGRAM], delayMs: 10 }] });
   await mockSalesforce(context);
@@ -101,15 +102,20 @@ test('the Draw chip sends the contract; the diagram renders as an SVG and only t
   await excalidraw.close();
   await expect(panel.getByText(/Your diagram is on the clipboard/)).toHaveCount(0);
 
-  // Follow-up: every element (the pill plus the chip's words as the question), and that picture hides its own chip.
-  await panel.getByRole('button', { name: 'Draw every element' }).click();
+  // No follow-up chips under the picture: the other two pictures are in the Actions menu.
+  await expect(panel.getByRole('button', { name: 'Draw every element' })).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Draw one element' })).toHaveCount(0);
+
+  // Every element, from the menu (the words as the question, so the bubble says what was asked).
+  await panel.getByRole('button', { name: 'Actions' }).click();
+  await panel.getByRole('menuitem', { name: 'Draw every element' }).click();
   await expect(panel.locator('.flow-diagram svg')).toHaveCount(2, { timeout: 20_000 });
   expect(lastUserText(messageCalls(await providerCalls(panel))[1]?.body)).toContain('<response_contract mode="draw" variant="admins">');
-  await expect(panel.getByRole('button', { name: 'Draw every element' })).toHaveCount(1); // only under the first picture
-  await expect(panel.getByRole('button', { name: 'Draw one element…' })).toHaveCount(2);
+  await expect(panel.getByRole('log').getByText('Draw every element', { exact: true })).toBeVisible();
 
-  // Follow-up: around one element, through the picker, sent on selection.
-  await panel.getByRole('button', { name: 'Draw one element…' }).last().click();
+  // Around one element, from the menu, through the picker, sent on selection.
+  await panel.getByRole('button', { name: 'Actions' }).click();
+  await panel.getByRole('menuitem', { name: 'Draw one element' }).click();
   await expect(panel.getByText('Draw one element', { exact: true })).toBeVisible();
   await panel.getByLabel('Search elements').fill('customer');
   await panel.getByRole('option', { name: /CheckCustomerType/ }).click();
@@ -118,7 +124,26 @@ test('the Draw chip sends the contract; the diagram renders as an SVG and only t
   expect(turn).toContain('<response_contract mode="draw" variant="fromElement">');
   expect(turn).toContain('<focus_element name="CheckCustomerType">');
   expect(turn).toContain('Draw this flow around CheckCustomerType.');
-  await expect(panel.getByRole('log').getByText('CheckCustomerType', { exact: true }).first()).toBeVisible(); // the element chip in the bubble
+  await expect(panel.getByRole('log').getByText('CheckCustomerType', { exact: true }).first()).toBeVisible(); // the element's name in the bubble
+});
+
+test('when a picture draws below the fold, "Jump to latest" appears and brings its Open in Excalidraw bar into view', async ({ context, extensionId, serviceWorker }) => {
+  await prepare(context);
+  await installProviderMock(context, { answers: [{ chunks: [DIAGRAM], delayMs: 10 }] });
+  await mockSalesforce(context);
+  await seedReadyKey(serviceWorker);
+  const { panel } = await openFlow(context, extensionId);
+  await panel.setViewportSize({ width: 400, height: 480 });
+  await panel.getByRole('button', { name: /^Draw this flow/ }).click();
+  await expect(panel.locator('.flow-diagram svg')).toBeVisible({ timeout: 20_000 });
+  const open = panel.getByRole('button', { name: 'Open in Excalidraw' });
+  const log = panel.getByRole('log');
+  const below = async () => (await open.boundingBox())!.y + (await open.boundingBox())!.height > (await log.boundingBox())!.y + (await log.boundingBox())!.height;
+  expect(await below()).toBe(true); // the picture pushed its bar out of sight
+  const jump = panel.getByRole('button', { name: 'Jump to latest' });
+  await expect(jump).toBeVisible();
+  await jump.click();
+  await expect.poll(below).toBe(false);
 });
 
 test('a diagram Mermaid cannot parse shows the failure line and Try again, which re-sends the same question once', async ({ context, extensionId, serviceWorker }) => {
@@ -128,22 +153,26 @@ test('a diagram Mermaid cannot parse shows the failure line and Try again, which
   await seedReadyKey(serviceWorker);
   const { panel } = await openFlow(context, extensionId);
 
-  // Draw one element is reachable before any picture exists, from the quick-actions menu.
-  await panel.getByRole('button', { name: 'Quick actions' }).click();
-  await panel.getByRole('menuitem', { name: 'Draw one element…' }).click();
+  // Draw one element is reachable before any picture exists, from the Actions menu.
+  await panel.getByRole('button', { name: 'Actions' }).click();
+  await panel.getByRole('menuitem', { name: 'Draw one element' }).click();
   await expect(panel.getByText('Draw one element', { exact: true })).toBeVisible();
   await panel.getByLabel('Search elements').press('Escape');
   await expect(panel.getByLabel('Message')).toBeEnabled();
 
-  await panel.getByRole('button', { name: 'Quick actions' }).click();
-  await panel.getByRole('menuitem', { name: 'Draw this flow' }).click();
+  await panel.getByRole('button', { name: 'Actions' }).click();
+  await panel.getByRole('menuitem', { name: 'Draw main paths' }).click();
   await expect(panel.getByText('Couldn’t draw this one. The text it was working from is below.')).toBeVisible({ timeout: 20_000 });
   await expect(panel.getByRole('log')).toContainText('B[[[');
   await expect(panel.getByRole('button', { name: 'Open in Excalidraw' })).toHaveCount(0);
   await expect(panel.getByText(/A simplified picture/)).toHaveCount(0);
   await expect(panel.getByText('Interrupted')).toHaveCount(0); // the answer itself finished; only the picture failed
 
-  await panel.getByRole('button', { name: 'Try again' }).click();
+  // In the accent ink, not ghost grey: a text-accent className can lose to the ghost variant.
+  const tryAgain = panel.getByRole('button', { name: 'Try again' });
+  await panel.mouse.move(0, 0);
+  await expect.poll(() => tryAgain.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(31, 111, 120)'); // --accent, light
+  await tryAgain.click();
   await expect(panel.locator('.flow-diagram svg')).toBeVisible({ timeout: 20_000 });
   await expect(panel.getByText(/Couldn’t draw this one/)).toHaveCount(0);
   const calls = messageCalls(await providerCalls(panel));
@@ -152,26 +181,98 @@ test('a diagram Mermaid cannot parse shows the failure line and Try again, which
   expect(await panel.getByRole('log').getByText('Draw', { exact: true }).count()).toBe(1); // no duplicate bubble
 });
 
-test('with an element attached, the Draw chip and menu row draw from that element', async ({ context, extensionId, serviceWorker }) => {
+test('while an answer is arriving, Actions and the model chip are off, so nothing is chosen only to be dropped', async ({ context, extensionId, serviceWorker }) => {
   await prepare(context);
-  await installProviderMock(context, { answers: [{ chunks: [DIAGRAM], delayMs: 10 }] });
+  const slow = Array.from({ length: 40 }, (_, i) => `word${i + 1} `);
+  await installProviderMock(context, { answers: [{ chunks: [DIAGRAM], delayMs: 10 }, { chunks: slow, delayMs: 100 }] });
   await mockSalesforce(context);
   await seedReadyKey(serviceWorker);
   const { panel } = await openFlow(context, extensionId);
 
-  await panel.getByRole('button', { name: 'Explain an element' }).click();
-  await panel.getByLabel('Search elements').fill('customer');
-  await panel.getByRole('option', { name: /CheckCustomerType/ }).click();
-  await expect(panel.getByRole('button', { name: 'Remove CheckCustomerType' })).toBeVisible();
-  await expect(panel.getByRole('button', { name: 'Draw CheckCustomerType' })).toBeVisible(); // the chip
-  await panel.getByRole('button', { name: 'Quick actions' }).click();
-  await expect(panel.getByRole('menuitem', { name: 'Draw CheckCustomerType' })).toBeVisible();
-  await expect(panel.getByRole('menuitem', { name: 'Draw one element…' })).toHaveCount(0); // redundant while one is attached
-  await panel.getByRole('menuitem', { name: 'Draw CheckCustomerType' }).click();
-
+  await panel.getByRole('button', { name: /^Draw this flow/ }).click();
   await expect(panel.locator('.flow-diagram svg')).toBeVisible({ timeout: 20_000 });
-  const turn = lastUserText(messageCalls(await providerCalls(panel))[0]?.body);
-  expect(turn).toContain('<response_contract mode="draw" variant="fromElement">');
-  expect(turn).toContain('<focus_element name="CheckCustomerType">');
-  await expect(panel.getByRole('button', { name: 'Remove CheckCustomerType' })).toHaveCount(0); // the chip is spent
+  const actions = panel.getByRole('button', { name: 'Actions' });
+  const model = panel.getByRole('button', { name: 'Claude Sonnet 5' });
+  await expect(actions).toBeEnabled();
+  await expect(model).toBeEnabled();
+
+  await panel.getByLabel('Message').fill('And the fault paths?');
+  await panel.getByLabel('Message').press('Enter');
+  await expect(panel.getByRole('log')).toContainText('word2');
+  await expect(actions).toBeDisabled();
+  // A switch mid-answer would post its note under the answer still arriving, which would then read as interrupted.
+  await expect(model).toBeDisabled();
+
+  await panel.getByRole('button', { name: 'Stop' }).click();
+  await expect(actions).toBeEnabled();
+  await expect(model).toBeEnabled();
+});
+
+test('on a flow of more than 100 elements, Draw every element asks first; Draw main paths draws those, and asking again then choosing it draws every one', async ({ context, extensionId, serviceWorker }) => {
+  await prepare(context);
+  await installProviderMock(context, { answers: [{ chunks: [DIAGRAM], delayMs: 10 }, { chunks: [EVERY], delayMs: 10 }] });
+  await mockSalesforce(context);
+  // A synthetic chain of 119 assignments in place of the small flow (a later route wins); with Start, which the Outline counts, 120 elements.
+  const large = { label: 'Long Chain', processType: 'AutoLaunchedFlow', start: { connector: { targetReference: 'Step_1' } }, assignments: Array.from({ length: 119 }, (_, i) => ({ name: `Step_${i + 1}`, label: `Step ${i + 1}`, assignmentItems: [], ...(i < 118 ? { connector: { targetReference: `Step_${i + 2}` } } : {}) })) };
+  await context.route(/\/tooling\/sobjects\/Flow\/[A-Za-z0-9]+$/, (route) => route.fulfill({ json: { Id: VERSION_ID, VersionNumber: 4, Status: 'Draft', MasterLabel: FLOW_A_LABEL, DefinitionId: DEFINITION_ID, ProcessType: 'AutoLaunchedFlow', LastModifiedDate: '2026-09-01T10:00:00.000+0000', Metadata: large } }));
+  await seedReadyKey(serviceWorker);
+  const { panel } = await openFlow(context, extensionId);
+
+  await panel.getByRole('button', { name: 'Actions' }).click();
+  await panel.getByRole('menuitem', { name: 'Draw every element' }).click();
+  const ask = panel.getByRole('alertdialog', { name: 'Draw every element?' });
+  await expect(ask).toContainText(/^This flow has 120 elements\. Drawing every one can take a couple of minutes\./);
+  expect(messageCalls(await providerCalls(panel))).toHaveLength(0); // nothing sent until a choice
+
+  await ask.getByRole('button', { name: 'Draw main paths' }).click();
+  await expect(ask).toHaveCount(0);
+  await expect(panel.locator('.flow-diagram svg')).toBeVisible({ timeout: 20_000 });
+  expect(lastUserText(messageCalls(await providerCalls(panel))[0]?.body)).toContain('<response_contract mode="draw" variant="business">');
+
+  await panel.getByRole('button', { name: 'Actions' }).click();
+  await panel.getByRole('menuitem', { name: 'Draw every element' }).click();
+  await ask.getByRole('button', { name: 'Draw every element' }).click();
+  await expect(ask).toHaveCount(0);
+  await expect.poll(async () => messageCalls(await providerCalls(panel)).length).toBe(2);
+  expect(lastUserText(messageCalls(await providerCalls(panel))[1]?.body)).toContain('<response_contract mode="draw" variant="admins">');
+  // Every element is not a simplified picture, and its footer does not say so.
+  await expect(panel.getByText(/^Drawn by Anthropic from the saved version/)).toBeVisible({ timeout: 20_000 });
+  await expect(panel.getByText(/A simplified picture/)).toHaveCount(1); // the main-paths picture's, above
+});
+
+const DIAGRAM_TOO_BIG = 'Too big to read here. Open it in Excalidraw to zoom in.';
+
+test('a picture too wide to read opens on its middle and scrolls sideways; one far wider shows whole, with a line pointing to Excalidraw', async ({ context, extensionId, serviceWorker }) => {
+  const row = (n: number, label: (i: number) => string) => Array.from({ length: n }, (_, i) => `  S${i}["${label(i)}"] --> T["Create the case"]`).join('\n');
+  const wide = `\`\`\`mermaid\nflowchart TD\n${row(4, (i) => `Set the defaults for region ${i + 1}`)}\n\`\`\`\n\nFour alike steps lead into one.`;
+  const huge = `\`\`\`mermaid\nflowchart TD\n${row(30, (i) => `Set the defaults for region ${i + 1}`)}\n\`\`\`\n\nThirty alike steps lead into one.`;
+  await prepare(context);
+  // The picture's sentence arrives after its fence, so the picture draws while the answer is still arriving, as a model's does.
+  const [wideFence, wideTail] = wide.split('\n\n');
+  await installProviderMock(context, { answers: [{ chunks: [`${wideFence}\n\n`, 'Four alike steps ', 'lead into one.'], delayMs: 400 }, { chunks: [huge], delayMs: 10 }] });
+  void wideTail;
+  await mockSalesforce(context);
+  await seedReadyKey(serviceWorker);
+  const { panel } = await openFlow(context, extensionId);
+  await panel.setViewportSize({ width: 400, height: 520 }); // a side panel's width, short enough that the answer scrolls
+
+  await panel.getByRole('button', { name: /^Draw this flow/ }).click();
+  const first = panel.locator('.flow-diagram').first();
+  await expect(first).toHaveAttribute('data-fit', 'scrolls', { timeout: 20_000 });
+  const scroll = await first.evaluate((el) => ({ left: el.scrollLeft, max: el.scrollWidth - el.clientWidth }));
+  expect(scroll.max).toBeGreaterThan(0);
+  expect(Math.abs(scroll.left - scroll.max / 2)).toBeLessThanOrEqual(1); // opens on the middle, not a corner
+  await expect(first).toHaveAttribute('data-edge', 'middle');
+  await expect(panel.getByText(DIAGRAM_TOO_BIG)).toHaveCount(0);
+  // The picture takes its readable height after the answer's last scroll; the reader stays at the bottom, with
+  // Open in Excalidraw in sight.
+  await expect(panel.getByRole('button', { name: 'Open in Excalidraw' })).toBeInViewport();
+  await expect.poll(() => panel.getByRole('log').evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight)).toBeLessThan(2);
+
+  await panel.getByLabel('Message').fill('Draw it with every region');
+  await panel.getByLabel('Message').press('Enter');
+  const second = panel.locator('.flow-diagram').nth(1);
+  await expect(second).toHaveAttribute('data-fit', 'tooBig', { timeout: 20_000 });
+  await expect(panel.getByText(DIAGRAM_TOO_BIG)).toBeVisible();
+  expect(await second.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0); // whole, never a corner
 });

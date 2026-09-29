@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { keyFormatHint, keyStatusLine } from './key-copy';
 
 describe('keyStatusLine', () => {
-  it('matches the design’s status states and names the provider when it could not be reached', () => {
+  it('covers every key status and names the provider when it could not be reached', () => {
     expect(keyStatusLine('anthropic', 'idle')).toBe('');
     expect(keyStatusLine('anthropic', 'checking')).toBe('Checking…');
     expect(keyStatusLine('anthropic', 'accepted')).toBe('Key accepted');

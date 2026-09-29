@@ -1,5 +1,4 @@
-// OpenAI Chat Completions adapter (OpenAI rules).
-// Chat Completions for v1.0; the Responses API is the v1.1 migration.
+// OpenAI Chat Completions adapter.
 
 import { classifyByStatus, type ErrorBody, streamRequest } from './http';
 import { parseJsonSse } from './sse';

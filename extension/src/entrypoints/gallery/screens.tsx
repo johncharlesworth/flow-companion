@@ -108,7 +108,7 @@ export const SEEDS: Record<string, () => Promise<void>> = {
           { role: 'user', displayText: 'What does this flow do?', sentText: 'What does this flow do?', mode: 'ask', timestamp: NOW - 60_000 },
           { role: 'assistant', displayText: ANSWER, stopReason: 'end', timestamp: NOW - 50_000 },
           { role: 'user', displayText: '', sentText: 'x', mode: 'overview', timestamp: NOW - 40_000 },
-          { role: 'assistant', displayText: 'It is a record-triggered flow on Account that assigns an owner and creates a follow-up task.', stopReason: 'end', reread: true, timestamp: NOW - 30_000 },
+          { role: 'assistant', displayText: 'It is a record-triggered flow on Account that assigns an owner and creates a follow-up task.', stopReason: 'end', timestamp: NOW - 30_000 },
           { role: 'notice', displayText: 'Switched to Claude Opus 5', timestamp: NOW - 20_000 },
         ],
       },

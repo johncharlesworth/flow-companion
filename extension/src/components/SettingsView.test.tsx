@@ -56,7 +56,7 @@ describe('SettingsView — AI provider', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noreferrer');
     expect(link.closest('p')).toHaveTextContent(/^Not ready for a key\? See it on a demo flow first$/);
-    const lead = screen.getByText(/^Pick the provider you have an account with/);
+    const lead = screen.getByText(/^Pick a provider you have an account with/);
     const firstCard = screen.getByText('Anthropic · Claude models');
     expect(lead.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(link.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -165,7 +165,7 @@ describe('SettingsView — AI provider', () => {
   it('shows the Google free-tier line only on the Google card, and every card carries the provider-named disclosure', async () => {
     renderSettings();
     await userEvent.click(await screen.findByText('Anthropic · Claude models'));
-    expect(screen.getByText(/is sent to Anthropic under your key/)).toHaveTextContent('When you chat, this flow’s saved metadata — element names, formulas, and text — is sent to Anthropic under your key. What is sent?');
+    expect(screen.getByText(/is sent to Anthropic under your key/)).toHaveTextContent('When you chat, this flow’s saved metadata is sent to Anthropic under your key. What is sent?');
     expect(screen.queryByText(/free tier/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByText('Google · Gemini models'));
     expect(await screen.findByText(/On Google’s free tier/)).toBeInTheDocument();

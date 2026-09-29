@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or help
+    url: https://getflowcompanion.com/docs/
+    about: Start with the docs, or email support@getflowcompanion.com. No GitHub account needed.
+  - name: Report a security problem
+    url: https://github.com/johncharlesworth/flow-companion/security/policy
+    about: Please don't open a public issue. The security policy says how to report privately.

@@ -11,19 +11,20 @@
 #   - Local paths (file://…, /Users/<name>, /home/<name>, /private/<dir>, ~/Library/<dir>; the bare token alone is not a hit)
 #   - Provider keys (sk-ant-, sk-or-, sk-proj- followed by a key body of 24+ characters)
 #   - Provider env var names (ANTHROPIC-API-KEY, OPENAI-API-KEY, GOOGLE-API-KEY, GEMINI-API-KEY) — real hyphens
-#   - Forbidden file paths (.dev.vars, references/sample-flow.json, references/*, .DS_Store, ~/.claude/plans/)
+#   - Forbidden file paths (.dev.vars, references/sample-flow.json, references/Salesforce-Inspector-reloaded/, .DS_Store, .claude/plans/)
 #   - Optional deny list at scripts/pii-deny-list.txt (gitignored)
 #
-# Self-exclusions (load-bearing — .md "Scanner self-exclusion"):
+# Exclusions (each line says why):
 #   - scripts/scan-for-pii.sh (contains the literal patterns it blocks)
 #   - scripts/pii-allowlist.txt (contains synthetic example values)
+#   - scripts/pii-deny-list.txt (contains the terms it denies)
 #   - scripts/pre-commit-hook.sh and scripts/install-git-hooks.sh (reference the patterns)
 #   - extension/test/fixtures/synthetic-* (intentionally synthetic, any extension, may match broad patterns)
 #   - package-lock.json / pnpm-lock.yaml / yarn.lock (auto-generated; SHA hashes collide with SF_ID regex)
 
 set -u
 
-# Preflight: require bash. Defense in depth — if a future change brings back
+# Preflight: require bash. Defense in depth — if a change introduces
 # bash-4-only constructs, this fails loudly instead of exiting 0 silently
 # (which is what happens on macOS stock bash 3.2 if 'declare -A' is used).
 if [[ -z "${BASH_VERSION:-}" ]]; then
@@ -74,11 +75,9 @@ is_self_excluded() {
 }
 
 # Synthetic fixtures are exempt — any file under extension/test/fixtures/
-# whose name starts with "synthetic-". Originally .json-only; broadened to
-# any extension so notes can reference test-fixture content in .txt
-# form without inlining scanner-trigger literals (per the Option C
-# resolution recorded at the time). Privacy promise preserved
-# because PR review of any new synthetic-* file is the gate.
+# whose name starts with "synthetic-", whatever its extension, so fixture
+# content can live in .txt as well as .json. PR review of any new synthetic-*
+# file is the gate that keeps real data out.
 is_synthetic_fixture() {
   case "$1" in
     extension/test/fixtures/synthetic-*|*/extension/test/fixtures/synthetic-*) return 0 ;;
@@ -99,9 +98,10 @@ is_lockfile() {
   return 1
 }
 
-# Load allowlist (literal substrings, one per line, # comments).
+# Load allowlist (literal strings, one per line, # comments; a hit is
+# allowed only when it equals an entry exactly).
 # Indexed array + linear scan (bash 3.2 compatible — macOS stock bash predates
-# associative arrays). Allowlist is tiny (~15 entries); O(n) lookup is fine.
+# associative arrays). The allowlist is small; O(n) lookup is fine.
 declare -a ALLOWLIST_ENTRIES=()
 if [[ -f "$ALLOWLIST" ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do

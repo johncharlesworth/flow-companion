@@ -1,6 +1,5 @@
 // Pure per-provider key prefix check, for the "this looks like an Anthropic
-// key" hint. Ported verbatim from the earlier build format-validator.ts except
-// the ProviderId import. Not a security control: the provider decides.
+// key" hint. Not a security control: the provider decides.
 
 import type { ProviderId } from './models';
 

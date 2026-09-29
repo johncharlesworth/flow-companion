@@ -1,7 +1,7 @@
 // Writes public/THIRD-PARTY-NOTICES.txt and public/LICENSE.txt, which WXT
 // copies into the built package, so the zip a user installs carries every
 // bundled dependency's licence text (the bundler strips licence comments)
-// and our own licence and copyright. Run by `npm run zip`.
+// and the project's own licence and copyright. Run by `npm run zip`.
 //
 // The list comes from package-lock.json: every installed package that is not
 // dev-only. Licence texts are read from each package's LICENSE/LICENCE/COPYING

@@ -1,6 +1,6 @@
 // Shared HTTP plumbing for the adapters: the request, the error classification
-// (the error classes; provider body text is read for classification only and
-// never surfaces), and the abort contract.
+// (provider body text is read for classification only and never surfaces), and
+// the abort contract.
 
 import type { ChatError, Chunk } from './types';
 

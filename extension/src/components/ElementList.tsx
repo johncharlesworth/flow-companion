@@ -6,7 +6,7 @@ import { filterOutline, type FlowOutline, type OutlineItem, UNGROUPED_THRESHOLD 
 
 // One component for the Outline and the Explain picker:
 // search pinned at top, groups collapsed by default, label plus API name in
-// mono, keyboard navigable. Selecting does not send.
+// mono, keyboard navigable. Selecting sends at once (the caller decides what).
 export function ElementList({ outline, onSelect, focusSearch = false }: { outline: FlowOutline; onSelect: (item: OutlineItem) => void; focusSearch?: boolean }) {
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -29,8 +29,9 @@ export function ElementList({ outline, onSelect, focusSearch = false }: { outlin
         onClick={() => onSelect(item)}
         className="flex w-full flex-col items-start rounded-button px-3 py-1.5 text-left hover:bg-accent-subtle focus-visible:bg-accent-subtle"
       >
-        <span className="text-[14px] text-text-1">{item.label}</span>
-        <span className="font-mono text-xs text-text-3">{item.name}</span>
+        {/* Long names wrap rather than push the list sideways: API names run to 80 characters with no spaces, and the whole name is what tells two similar ones apart. */}
+        <span className="max-w-full text-[14px] text-text-1 wrap-anywhere">{item.label}</span>
+        <span className="max-w-full font-mono text-xs text-text-3 wrap-anywhere">{item.name}</span>
       </button>
     ));
 

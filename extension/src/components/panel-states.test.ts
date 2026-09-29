@@ -17,7 +17,7 @@ describe('describeState', () => {
       { kind: 'error', errorKind: 'apiDisabled', sfHost: SF } as const,
       'Your org or profile blocks API access, which this extension needs. Check Setup → Profiles → your profile → API Enabled, and Setup → API Access Control.',
     ],
-  ])('%o uses the design’s sentence', (state, body) => {
+  ])('%o shows its body sentence', (state, body) => {
     expect(describeState(state, { refresh: vi.fn() })?.body).toBe(body);
   });
 

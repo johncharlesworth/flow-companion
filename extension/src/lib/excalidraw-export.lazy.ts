@@ -1,4 +1,4 @@
-// Open in Excalidraw, route (a) of the diagram is
+// Open in Excalidraw, route (a): the diagram is
 // converted to Excalidraw's element skeletons inside the extension and written
 // to the clipboard in Excalidraw's own paste format, so one paste on the
 // excalidraw.com canvas places editable shapes. Nothing is uploaded and no

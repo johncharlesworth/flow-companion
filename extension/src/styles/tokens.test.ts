@@ -3,9 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-// The design rule: "All text tokens meet 4.5:1 on their surface in both themes;
-// verify with the real values." This test is that verification,
-// run against the CSS itself so the two cannot drift apart.
+// Every text token meets 4.5:1 on its surface in both themes. This test checks
+// it against the CSS itself, with the real values, so the two cannot drift apart.
 const css = fs.readFileSync(path.join(process.cwd(), 'src/styles/app.css'), 'utf8');
 
 function tokens(selector: string): Record<string, string> {
@@ -36,6 +35,12 @@ const PAIRS: [text: string, surface: string][] = [
   ['text-2', 'surface-elevated'],
   ['text-3', 'bg'],
   ['text-3', 'surface'],
+  ['text-3', 'surface-elevated'], // menus' role lines and the gauge's card
+  // The card under a picture and a document: its instructions, its hint line, and its copy link.
+  ['text-1', 'surface-tint'], // code blocks sit on the tint too
+  ['text-2', 'surface-tint'],
+  ['text-3', 'surface-tint'],
+  ['accent', 'surface-tint'],
   ['accent', 'bg'],
   ['accent-fg', 'accent'],
   ['danger', 'bg'],
@@ -48,7 +53,7 @@ describe.each([
   const t = tokens(selector);
 
   it('defines the complete token table', () => {
-    for (const name of ['bg', 'surface', 'surface-elevated', 'composer-field', 'border-hairline', 'text-1', 'text-2', 'text-3', 'accent', 'accent-fg', 'accent-subtle', 'success', 'warning', 'danger']) {
+    for (const name of ['bg', 'surface', 'surface-elevated', 'composer-field', 'surface-tint', 'border-hairline', 'text-1', 'text-2', 'text-3', 'accent', 'accent-fg', 'accent-subtle', 'success', 'warning', 'danger']) {
       expect(t[name], name).toMatch(/^#[0-9a-f]{6}$/);
     }
   });

@@ -1,4 +1,4 @@
-// Copy for every state the panel can be in. The design wins on copy.
+// Copy for every state the panel can be in.
 
 import { Compass, KeyRound, LogIn, Save, ShieldAlert, WifiOff, Workflow } from 'lucide-react';
 

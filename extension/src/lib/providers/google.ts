@@ -1,4 +1,4 @@
-// Google Gemini adapter (Google rules). The key travels in
+// Google Gemini adapter. The key travels in
 // the x-goog-api-key header, never the URL. No explicit cachedContents:
 // implicit caching is the provider's own, best effort.
 

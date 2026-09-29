@@ -5,9 +5,8 @@
 // interrupted answer, keeps the same question, and re-sends. Nothing here
 // ever retries on its own (invariant 1).
 //
-// A running answer outlives the view (a real-Chrome
-// pass: a glance at another tab used to kill a two-minute document). Runs
-// live in a module registry keyed by chat; the panel follows the active tab
+// A running answer outlives the view, so a glance at another tab does not
+// end a two-minute document. Runs live in a module registry keyed by chat; the panel follows the active tab
 // and unmounts this hook, but the run keeps streaming and saving, and a view
 // that mounts on the same chat re-attaches to it through storage changes.
 // Only closing the panel or the window ends a run early, and that still
@@ -25,7 +24,7 @@ import recordedWith from '@@/test/fixtures/synthetic-demo-recorded-with.json';
 import type { ActiveFlow } from '@/hooks/useActiveFlow';
 import { browser } from 'wxt/browser';
 
-import { chatKey, clearChat, createChatWriter, getChat, type StoredChat, type StoredTurn } from '@/lib/chat-history';
+import { chatKey, clearChat, createChatWriter, getChat, latestAnswerIndex, type StoredChat, type StoredTurn } from '@/lib/chat-history';
 import { type ContextGateResult, shouldBlockSend } from '@/lib/context-gate';
 import { wrapFlowJson } from '@/lib/flow-wrapper';
 import { createFlowMeasurer, estimateTokens, type FlowMeasure, isChatGettingLong, reusedFlow, type UsageReport } from '@/lib/flow-size';
@@ -183,7 +182,7 @@ export function useChatStream({ flow, settings, recorded = false, makeProvider =
       nudgeShownRef.current = false;
       setNudge(false);
       // Idle unless this chat has a run in flight (a run for the previous flow keeps going under its own key).
-      setStatus(attached && liveRuns.get(key) === attached ? (chat?.turns.at(-1)?.displayText ? 'streaming' : 'waiting') : 'idle');
+      setStatus(attached && liveRuns.get(key) === attached ? (chat?.turns[latestAnswerIndex(chat.turns)]?.displayText ? 'streaming' : 'waiting') : 'idle');
     });
     if (!attached) {
       return () => {
@@ -194,7 +193,7 @@ export function useChatStream({ flow, settings, recorded = false, makeProvider =
       const next = changes[key]?.newValue as StoredChat | undefined;
       if (area !== 'local' || !next || !live) return;
       commit(mergeStored(turnsRef.current, next));
-      if (next.turns.at(-1)?.displayText) setStatus((s) => (s === 'waiting' ? 'streaming' : s));
+      if (next.turns[latestAnswerIndex(next.turns)]?.displayText) setStatus((s) => (s === 'waiting' ? 'streaming' : s));
     };
     browser.storage.onChanged.addListener(onChanged);
     void attached.done.then(async () => {
@@ -256,6 +255,7 @@ export function useChatStream({ flow, settings, recorded = false, makeProvider =
     const picker = buildPicker(provider, settings.keys[provider].models, null);
     const item = [...picker.recommended, ...picker.more].find((m) => m.id === modelId);
     const maxInputTokens = item?.maxInputTokens ?? findSpec(provider, modelId)?.maxInputTokens ?? UNKNOWN_MODEL_INPUT_TOKENS;
+    const family = item?.family ?? findSpec(provider, modelId)?.family ?? 'unknown';
     const transcriptTokens = toMessages(turns).reduce((sum, m) => sum + estimateTokens(m.content, provider), 0);
     const gate = shouldBlockSend({
       maxInputTokens,
@@ -263,7 +263,7 @@ export function useChatStream({ flow, settings, recorded = false, makeProvider =
       flowTokens: flowMeasure.tokens,
       transcriptTokens,
       assembledTurnTokens: NEXT_TURN_ESTIMATE,
-      maxOutputTokens: maxOutputTokensFor('ask'),
+      maxOutputTokens: maxOutputTokensFor('ask', family),
       currentModelId: modelId,
       candidates: [...picker.recommended, ...picker.more].map((m) => ({ id: m.id, label: m.label, maxInputTokens: m.maxInputTokens })),
     });
@@ -288,7 +288,7 @@ export function useChatStream({ flow, settings, recorded = false, makeProvider =
       const item = [...picker.recommended, ...picker.more].find((m) => m.id === modelId);
       const family = item?.family ?? spec?.family ?? 'unknown';
       const maxInputTokens = item?.maxInputTokens ?? spec?.maxInputTokens ?? UNKNOWN_MODEL_INPUT_TOKENS;
-      const maxOutputTokens = maxOutputTokensFor(mode);
+      const maxOutputTokens = maxOutputTokensFor(mode, family);
 
       const history = toMessages(turnsRef.current);
       const messages = [...history, { role: 'user' as const, content: userTurn.sentText ?? userTurn.displayText }];
@@ -405,10 +405,6 @@ export function useChatStream({ flow, settings, recorded = false, makeProvider =
       else Object.assign(finished, { interrupted: undefined, stopReason: outcome });
 
       if (usage) {
-        const flowSize = flowMeasure?.tokens ?? flowTokens;
-        const reused = reusedFlow(usage as UsageReport, flowSize);
-        const isFirstAnswer = history.length === 0;
-        if (!isFirstAnswer && !reused) finished.reread = true;
         if (keyRef.current === runKey && !nudgeShownRef.current && isChatGettingLong({ lastInputTokens: usage.inputTokens, nextTurnEstimate: NEXT_TURN_ESTIMATE, outputBudget: maxOutputTokens, maxInputTokens })) {
           nudgeShownRef.current = true;
           setNudge(true);
@@ -449,18 +445,24 @@ export function useChatStream({ flow, settings, recorded = false, makeProvider =
   const resend = useCallback(
     async (onlyInterrupted: boolean) => {
       if (status !== 'idle' || liveRuns.has(key)) return;
+      // The flow will not fit the chosen model: sending would stop at the gate, and removing the
+      // question and its answer first would lose them. Leave everything.
+      if (blocked && !blocked.ok) return;
       const current = turnsRef.current;
-      const last = current[current.length - 1];
+      // The latest answer, past any notes after it: a model switch after an error posts
+      // "Switched to …", and Retry must still re-send.
+      const answerIndex = latestAnswerIndex(current);
+      const last = current[answerIndex];
       if (!last || last.role !== 'assistant') return;
       if (onlyInterrupted && last.interrupted !== 'error') return;
-      const userIndex = current.length - 2;
+      const userIndex = answerIndex - 1;
       const userTurn = current[userIndex];
       if (!userTurn || userTurn.role !== 'user') return;
-      // Remove the answer and the question; run adds the same question back (no duplicate bubble).
-      commit(current.slice(0, userIndex));
+      // Remove the answer and the question, keeping the notes after them; run adds the same question back (no duplicate bubble).
+      commit([...current.slice(0, userIndex), ...current.slice(answerIndex + 1)]);
       await run({ ...userTurn, id: nextId(), timestamp: Date.now() }, userTurn.mode ?? 'ask');
     },
-    [status, run, commit, key],
+    [status, run, commit, key, blocked],
   );
   const retry = useCallback(() => resend(true), [resend]);
   const redo = useCallback(() => resend(false), [resend]);

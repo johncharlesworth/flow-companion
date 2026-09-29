@@ -1,6 +1,5 @@
 // Minimal Salesforce REST client for the Tooling API, called from the side
-// panel with the user's own session id. Ported from the earlier build build with
-// the fixes named in every call carries an AbortSignal
+// panel with the user's own session id. Every call carries an AbortSignal
 // with a timeout (and can be cancelled by the caller), the request identifies
 // itself with Sforce-Call-Options, and nothing is ever written to the console.
 

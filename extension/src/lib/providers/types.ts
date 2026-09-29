@@ -1,7 +1,7 @@
 // Provider-agnostic contract for the three hand-rolled adapters. The canonical
 // message shape is a system string plus alternating user/assistant turns; the
-// flow block is injected into the first user turn by each adapter at send time
-// (prompt layout), so history never stores it.
+// flow block is injected into the first user turn by each adapter at send time,
+// so history never stores it.
 
 import type { RequestFamily } from '@/lib/models';
 

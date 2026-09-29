@@ -301,11 +301,12 @@ exports[`SanitizedMarkdown (XSS hardening — invariant 5) > the rehype pipeline
       "allowDataImages": false,
       "allowedImagePrefixes": [],
       "allowedLinkPrefixes": [
-        "https://",
+        "*",
       ],
       "allowedProtocols": [
         "https",
       ],
+      "linkBlockPolicy": "text-only",
     },
   ],
 ]

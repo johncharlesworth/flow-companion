@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Tailwind 4 resets buttons to the arrow cursor; clickable things show the hand (real-Chrome check). */
+/* Tailwind 4 resets buttons to the arrow cursor; clickable things show the hand. */
 button:not(:disabled),
 [role='button']:not([aria-disabled='true']) {
   cursor: pointer;
@@ -13,7 +13,7 @@ button:not(:disabled),
 @import '@fontsource/ibm-plex-mono/latin-400.css';
 
 /*
- * The complete token table from the . Light is the default;
+ * The complete token table. Light is the default;
  * dark applies when the user chose it (data-theme="dark") or when the system
  * prefers it and the user chose nothing. Tokens are scoped to any element
  * carrying data-theme so the gallery can show both themes side by side.
@@ -25,7 +25,11 @@ button:not(:disabled),
   --surface: #ffffff;
   --surface-elevated: #ffffff;
   --composer-field: #ffffff;
+  /* A shade below the panel for the card under a picture (white would compete with the message box).
+     #F0EEE9 keeps text-3 at 4.5:1 on it. */
+  --surface-tint: #f0eee9;
   --border-hairline: #e4e1db;
+  --border-composer: #d9d5cd;
   --text-1: #1c1b19;
   --text-2: #55524c;
   --text-3: #706c65;
@@ -36,45 +40,54 @@ button:not(:disabled),
   --warning: #9a6700;
   --danger: #b42318;
   --shadow-elevated: 0 4px 16px rgba(28, 27, 25, 0.12), 0 1px 3px rgba(28, 27, 25, 0.08);
+  --shadow-composer: 0 1px 2px rgba(28, 27, 25, 0.03), 0 3px 8px rgba(28, 27, 25, 0.04);
 }
 
+/* Dark theme: charcoal, with the message box lifted off the panel. text-3 is light enough to keep 4.5:1,
+   on menus and cards too. */
 [data-theme='dark'] {
   color-scheme: dark;
-  --bg: #161513;
-  --surface: #1f1e1b;
-  --surface-elevated: #262421;
-  --composer-field: #1f1e1b;
-  --border-hairline: #33312d;
+  --bg: #1f1e1c;
+  --surface: #292825;
+  --surface-elevated: #302f2c;
+  --composer-field: #292825;
+  --surface-tint: #191816;
+  --border-hairline: #393733;
+  --border-composer: #46433e;
   --text-1: #eceae4;
   --text-2: #b5b1a8;
-  --text-3: #8a867e;
+  --text-3: #9c978f;
   --accent: #6fbfc7;
   --accent-fg: #0f1a13;
-  --accent-subtle: #1c3237;
+  --accent-subtle: #1f363b;
   --success: #6fcf97;
   --warning: #e5b85c;
   --danger: #f08a80;
   --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.22), 0 3px 8px rgba(0, 0, 0, 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #161513;
-    --surface: #1f1e1b;
-    --surface-elevated: #262421;
-    --composer-field: #1f1e1b;
-    --border-hairline: #33312d;
+    --bg: #1f1e1c;
+    --surface: #292825;
+    --surface-elevated: #302f2c;
+    --composer-field: #292825;
+    --surface-tint: #191816;
+    --border-hairline: #393733;
+    --border-composer: #46433e;
     --text-1: #eceae4;
     --text-2: #b5b1a8;
-    --text-3: #8a867e;
+    --text-3: #9c978f;
     --accent: #6fbfc7;
     --accent-fg: #0f1a13;
-    --accent-subtle: #1c3237;
+    --accent-subtle: #1f363b;
     --success: #6fcf97;
     --warning: #e5b85c;
     --danger: #f08a80;
     --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.22), 0 3px 8px rgba(0, 0, 0, 0.16);
   }
 }
 
@@ -86,7 +99,9 @@ button:not(:disabled),
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
   --color-composer: var(--composer-field);
+  --color-surface-tint: var(--surface-tint);
   --color-hairline: var(--border-hairline);
+  --color-composer-line: var(--border-composer);
   --color-text-1: var(--text-1);
   --color-text-2: var(--text-2);
   --color-text-3: var(--text-3);
@@ -97,6 +112,11 @@ button:not(:disabled),
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --shadow-elevated: var(--shadow-elevated);
+  --shadow-composer: var(--shadow-composer);
+  /* The small print, set in pixels: Tailwind's text-xs is 0.75rem, which is
+     10.5px on this panel's 14px root, too small to read comfortably. */
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
   --radius-composer: 12px;
   --radius-popover: 12px;
   --radius-button: 8px;
@@ -136,9 +156,18 @@ button:not(:disabled),
   }
 }
 
-/* Chip fills for the version chip: the design names "success-subtle" and
-   "warning-subtle" fills; they are the success/warning tokens mixed into the
-   surface, not new colours. */
+/* Chrome injects its own `body { font-family: system-ui, sans-serif; font-size: 75% }`
+   into every extension page, and it is unlayered, so it beats the layered rule above:
+   the panel would render in the system font, and text with no size of its own at 10.5px.
+   This rule is unlayered too and one step more specific, so the panel is IBM Plex Sans
+   at 14px, as the rule above intends. */
+html body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+/* Chip fills for the version chip: "success-subtle" and "warning-subtle" are
+   the success/warning tokens mixed into the surface, not new colours. */
 @utility fill-success-subtle {
   background-color: color-mix(in oklab, var(--success) 16%, var(--surface));
 }
@@ -146,11 +175,14 @@ button:not(:disabled),
   background-color: color-mix(in oklab, var(--warning) 16%, var(--surface));
 }
 
-/* Answers: full-width real typography (principle 2). */
+/* Answers: full-width real typography. A long API name (up to 80
+   characters, no spaces) breaks rather than running off the panel; break-word, not
+   anywhere, so tables and code blocks keep their widths and scroll inside themselves. */
 .answer {
   font-size: 14px;
   line-height: 1.55;
   color: var(--text-1);
+  overflow-wrap: break-word;
 }
 .answer > * + * {
   margin-top: 0.6em;
@@ -199,7 +231,9 @@ button:not(:disabled),
 .answer pre {
   overflow-x: auto;
   border-radius: 6px;
-  background: var(--surface);
+  /* On the tint, inside a hairline: white would match the white element names in the text around it. Inset, so it takes no room. */
+  background: var(--surface-tint);
+  box-shadow: inset 0 0 0 1px var(--border-hairline);
   padding: 10px 12px;
 }
 /* Streamdown's code-block header holds only the language label and the copy and
@@ -210,6 +244,13 @@ button:not(:disabled),
 }
 .answer [data-streamdown='code-block'] {
   border: 0;
+}
+/* Streamdown wraps the block's <pre> in a body with its own border and padding, which would draw a
+   square box around the rounded one on every code block. */
+.answer [data-streamdown='code-block-body'] {
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 .answer table {
   display: block;
@@ -273,6 +314,26 @@ button:not(:disabled),
   height: auto;
   margin: 0 auto;
   font-family: var(--font-sans) !important;
+}
+/* A picture wider than the panel at readable size scrolls sideways (diagram-fit.ts), and fades on each
+   side that has more of it, so it reads as continuing rather than cut off. */
+.answer .flow-diagram[data-fit='scrolls'] {
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+.answer .flow-diagram[data-fit='scrolls'][data-edge='start'] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+.answer .flow-diagram[data-fit='scrolls'][data-edge='end'] {
+  mask-image: linear-gradient(to right, transparent, #000 28px);
+}
+/* A scrolling picture is a Tab stop (Chrome makes an overflowing scroller focusable), and a mask clips the
+   focus ring drawn outside it: while it has keyboard focus the fades go, so the ring shows. */
+.answer .flow-diagram[data-fit='scrolls'][data-edge]:focus-visible,
+.answer .flow-diagram[data-fit='scrolls']:focus-visible {
+  mask-image: none;
+}
+.answer .flow-diagram-too-big {
+  margin-top: -0.2em;
 }
 .answer .flow-diagram .node rect,
 .answer .flow-diagram .node polygon,

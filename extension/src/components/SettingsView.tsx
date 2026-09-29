@@ -108,7 +108,8 @@ export function SettingsView({ onBack, firstRun = false, onStartChatting, flowTo
           <h2 id="settings-provider" className="px-2 text-[15px] font-semibold text-text-1">
             AI provider
           </h2>
-          <p className="mb-2 px-2 text-xs text-text-3">{SUBSCRIPTION_NOTE}</p>
+          {/* 4px under the heading, which it would otherwise touch. */}
+          <p className="mb-2 mt-[4px] px-2 text-xs text-text-3">{SUBSCRIPTION_NOTE}</p>
           {firstRun && !demo && (
             <p className="mb-2 px-2 text-xs text-text-3">
               Not ready for a key?{' '}
@@ -159,7 +160,9 @@ export function SettingsView({ onBack, firstRun = false, onStartChatting, flowTo
           {active && picker && currentModelId && (
             <div className="mt-2 flex items-center gap-2 px-2 text-[14px] text-text-2">
               <span>
-                Default model: <span className="text-text-1">{currentModelLabel}</span>
+                {/* The name stays whole: at 320px it would break before its last word ("Claude Sonnet" / "5"). Non-breaking
+                    spaces rather than nowrap, so a long raw model id can still wrap at its hyphens instead of pushing Change off the card. */}
+                Default model: <span className="text-text-1">{currentModelLabel?.replace(/ /g, '\u00a0')}</span>
               </span>
               <ModelMenu
                 provider={active}
@@ -201,7 +204,8 @@ export function SettingsView({ onBack, firstRun = false, onStartChatting, flowTo
                   rows={3}
                   maxLength={CUSTOM_INSTRUCTIONS_MAX}
                   defaultValue={settings.customInstructions}
-                  placeholder="“I’m new to Flow. Define any jargon.” · “Use field labels, not API names.” · “Answer in Portuguese.”"
+                  // One example per line, no quotes or separators.
+                  placeholder={'I’m new to flow, define any jargon.\nUse field labels, not API names.\nAnswer in Portuguese.'}
                   onBlur={(e) => {
                     const value = e.target.value.slice(0, CUSTOM_INSTRUCTIONS_MAX);
                     if (value === settings.customInstructions) return;
@@ -339,7 +343,8 @@ function ProviderCard({ provider, selected, isActive, status, last4: saved4, rem
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-subtle">
           <Mark className="h-4 w-4 text-accent" aria-hidden="true" />
         </span>
-        <span className="flex-1 text-[14px] font-medium text-text-1">{CARD_TITLE[provider]}</span>
+        {/* One line: beside "Key saved" at 320px, "Anthropic · Claude models" would wrap its last word. */}
+        <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-text-1">{CARD_TITLE[provider]}</span>
         {isActive && status === 'validated' && <span className="text-xs text-success">Active</span>}
         {!selected && status === 'validated' && !isActive && <span className="text-xs text-text-3">Key saved</span>}
       </button>

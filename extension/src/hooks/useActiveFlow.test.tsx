@@ -144,7 +144,7 @@ describe('useActiveFlow — first load', () => {
   });
 });
 
-describe('useActiveFlow — acceptance: tab switching', () => {
+describe('useActiveFlow — tab switching', () => {
   it('switch tab: leaving the flow for the Flows list changes the state, coming back reloads the same flow', async () => {
     const { mineId, myTabId } = await arrange({ mine: FLOW_A });
     const { fetchSpy } = mockTooling();
@@ -236,7 +236,7 @@ describe('useActiveFlow — acceptance: tab switching', () => {
     });
     expect(result.current.state).toBe(loaded);
 
-    // Chrome strips url from both the event and the tab for a host we cannot see.
+    // Chrome strips url from both the event and the tab for a host the extension cannot see.
     vi.spyOn(fakeBrowser.tabs, 'query').mockImplementation((async () => [{ ...tab, url: undefined, active: true }]) as never);
     await act(async () => {
       await fakeBrowser.tabs.onUpdated.trigger(myTabId, { status: 'complete' }, { ...tab, url: undefined, active: true });

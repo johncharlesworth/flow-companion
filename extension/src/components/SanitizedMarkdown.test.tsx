@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { harden } from 'rehype-harden';
 import { describe, expect, test, vi } from 'vitest';
 
 import { DIAGRAM_FAILED } from './FlowDiagram';
@@ -46,7 +47,6 @@ describe('SanitizedMarkdown (XSS hardening — invariant 5)', () => {
     expect(container.querySelector('code')).not.toBeNull();
   });
 
-  // Added with the sanitiser rewrite:
   test('a raw <img onerror> renders no img at all (answers never contain images)', () => {
     const { container } = render(<SanitizedMarkdown markdown={'before <img src="x" onerror="alert(1)"> after ![pic](https://example.com/a.png)'} />);
     expect(container.querySelector('img')).toBeNull();
@@ -78,7 +78,32 @@ describe('SanitizedMarkdown (XSS hardening — invariant 5)', () => {
   test('the rehype pipeline is raw → sanitize → harden with the locked options (snapshot)', () => {
     const shape = REHYPE_PLUGINS.map((p) => (Array.isArray(p) ? [(p[0] as { name: string }).name, p[1]] : (p as { name: string }).name));
     expect(shape).toMatchSnapshot();
-    expect(HARDEN_OPTIONS).toEqual({ allowedLinkPrefixes: ['https://'], allowedImagePrefixes: [], allowDataImages: false, allowedProtocols: ['https'] });
+    // A named https prefix with no default origin makes harden throw on its first use,
+    // so it never runs; and a named prefix cannot say "any https site". So it takes the
+    // wildcard (it still drops script and data links); the link renderer keeps only
+    // https links clickable.
+    expect(HARDEN_OPTIONS).toEqual({ allowedLinkPrefixes: ['*'], allowedImagePrefixes: [], allowDataImages: false, allowedProtocols: ['https'], linkBlockPolicy: 'text-only' });
+  });
+
+  test('harden runs with these options instead of throwing and being skipped', () => {
+    expect(() => harden(HARDEN_OPTIONS)).not.toThrow();
+  });
+
+  test('only https links stay links: a relative, http, email or www link is its words, with nowhere to go and no "[blocked]"', () => {
+    const { container } = render(
+      <SanitizedMarkdown markdown={'[the flow list](/lightning/setup/Flows/home) · [a page](flows/home) · [plain](http://example.com) · user@example.invalid · www.example.com · [ok](https://example.com/y)'} />,
+    );
+    const anchors = [...container.querySelectorAll('a')];
+    expect(anchors.map((a) => a.getAttribute('href'))).toEqual(['https://example.com/y']);
+    expect(anchors[0]!.hasAttribute('node')).toBe(false); // no stray renderer prop on the element
+    for (const words of ['the flow list', 'plain', 'user@example.invalid', 'www.example.com']) expect(container.textContent).toContain(words);
+    expect(container.textContent).not.toContain('[blocked]');
+  });
+
+  test('a link whose address is still streaming in shows its words, not "[blocked]"', () => {
+    const { container } = render(<SanitizedMarkdown markdown={'See [Salesforce Help](https://help.sal'} streaming />);
+    expect(container.textContent).toContain('Salesforce Help');
+    expect(container.textContent).not.toContain('[blocked]');
   });
 
   test('tables, lists, and a long formula render inside the answer', () => {

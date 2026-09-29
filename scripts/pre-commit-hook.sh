@@ -27,7 +27,7 @@ while IFS= read -r f; do
 done < <(git diff --cached --name-only --diff-filter=ACMR)
 if [[ ${#STAGED[@]} -eq 0 ]]; then exit 0; fi
 
-# Resolve to repo-rooted paths (matches the scanner's path matching)
+# Staged paths are repo-relative, as the scanner's path checks expect.
 "$SCANNER" "${STAGED[@]}"
 status=$?
 if [[ $status -ne 0 ]]; then

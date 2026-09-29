@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -6,7 +6,7 @@ import syntheticFlow from '../../test/fixtures/synthetic-flow.json';
 import type { ChatTurn } from '@/hooks/useChatStream';
 
 import { DIAGRAM_FAILED } from './FlowDiagram';
-import { DIAGRAM_FOOTER, DRAW_CHIP, Transcript, type TranscriptProps, UNKNOWN_NAMES, WAITING } from './Transcript';
+import { DIAGRAM_FOOTER, Transcript, type TranscriptProps, UNKNOWN_NAMES, WAITING } from './Transcript';
 import { TooltipProvider } from './ui/tooltip';
 
 // The two on-demand modules need a real browser; here they are scripted.
@@ -18,8 +18,8 @@ vi.mock('@/lib/mermaid-render.lazy', () => ({
 }));
 vi.mock('@/lib/excalidraw-export.lazy', () => ({ toExcalidrawClipboard: async () => JSON.stringify({ type: 'excalidraw-api/clipboard', elements: [{ type: 'rectangle' }] }) }));
 
-// The interruption contract from and the footer lines from the
-// design, as the transcript renders them.
+// The interruption contract and the footer lines, as the transcript renders
+// them.
 
 function renderTranscript(turns: ChatTurn[], over: Partial<TranscriptProps> = {}) {
   const props: TranscriptProps = {
@@ -32,7 +32,6 @@ function renderTranscript(turns: ChatTurn[], over: Partial<TranscriptProps> = {}
     onErrorAction: vi.fn(),
     onDownloadDocument: vi.fn(),
     onRedo: vi.fn(),
-    onDrawFollowUp: vi.fn(),
     flowMetadata: syntheticFlow,
     ...over,
   };
@@ -64,7 +63,7 @@ describe('Transcript', () => {
 
     render(
       <TooltipProvider>
-        <Transcript turns={[question('Document this flow', { id: 'u2', mode: 'document' }), answer({ id: 'b', displayText: '', interrupted: 'stopped' })]} status="idle" provider="anthropic" currentModelLabel="Claude Sonnet 5" onRetry={vi.fn()} onContinue={vi.fn()} onErrorAction={vi.fn()} onDownloadDocument={vi.fn()} onRedo={vi.fn()} onDrawFollowUp={vi.fn()} flowMetadata={syntheticFlow} />
+        <Transcript turns={[question('Document this flow', { id: 'u2', mode: 'document' }), answer({ id: 'b', displayText: '', interrupted: 'stopped' })]} status="idle" provider="anthropic" currentModelLabel="Claude Sonnet 5" onRetry={vi.fn()} onContinue={vi.fn()} onErrorAction={vi.fn()} onDownloadDocument={vi.fn()} onRedo={vi.fn()} flowMetadata={syntheticFlow} />
       </TooltipProvider>,
     );
     expect(screen.getByText('Stopped before anything arrived.')).toBeInTheDocument();
@@ -96,11 +95,72 @@ describe('Transcript', () => {
     expect(props.onContinue).toHaveBeenCalledOnce();
   });
 
-  it('a quick-action question renders as a pill plus the element chip, never an empty bubble', () => {
+  it('a quick-action question renders as a pill plus the element name, never an empty bubble', () => {
     renderTranscript([question('', { mode: 'explain', focusElement: 'CheckCustomerType' }), answer({ stopReason: 'end' })]);
     expect(screen.getByText('Explain')).toBeInTheDocument();
     expect(screen.getByText('CheckCustomerType')).toBeInTheDocument();
     expect(screen.queryByText('Interrupted')).not.toBeInTheDocument();
+  });
+});
+
+describe('Transcript · the latest answer', () => {
+  it('an answer cut off before a word arrived, or halfway through a picture, offers Retry, not Continue: there is nothing to continue', async () => {
+    const empty = renderTranscript([question('Draw it anyway'), answer({ displayText: '', stopReason: 'max_tokens' })]);
+    expect(screen.getByText('The answer was cut off before it began')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(empty.onRedo).toHaveBeenCalledOnce();
+    expect(empty.onContinue).not.toHaveBeenCalled();
+    cleanup();
+
+    const half = renderTranscript([question('Draw every element', { mode: 'draw' }), answer({ displayText: '```mermaid\nflowchart TD\n  A["Start"] --> B', stopReason: 'max_tokens' })]);
+    expect(screen.getByText('The picture was cut off before it was finished')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(half.onRedo).toHaveBeenCalledOnce();
+  });
+
+  it('Retry and Continue sit under the latest answer only: under an earlier one they would do nothing, or continue the wrong answer', () => {
+    renderTranscript([
+      question('First'),
+      answer({ id: 'a1', displayText: 'Cut off here', stopReason: 'max_tokens' }),
+      question('Second'),
+      answer({ id: 'a2', displayText: 'Half an', interrupted: 'error' }),
+    ]);
+    expect(screen.getByText('Answer was cut off')).toBeInTheDocument(); // the earlier answer keeps its words
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument(); // but not the link
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1); // the latest one's
+  });
+
+  it('a note after the latest answer does not make it earlier, and while it streams it shows no footer at all', () => {
+    const turns: ChatTurn[] = [question('Why?'), answer({ id: 'a1', displayText: 'word1 word2', interrupted: 'error' }), { id: 'n1', role: 'notice', displayText: 'Flow updated to v5 (Draft)', timestamp: 3 }];
+    renderTranscript(turns, { status: 'streaming' });
+    expect(screen.queryByText('Interrupted')).not.toBeInTheDocument(); // still arriving, not interrupted
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('with sending blocked (the flow will not fit the chosen model), the latest failed answer offers no Retry', () => {
+    renderTranscript([question('Why?'), answer({ id: 'a1', displayText: '', interrupted: 'error', error: { class: 'providerBusy' } })], { sendBlocked: true });
+    expect(screen.getByText('Busy right now')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('an earlier card whose only action was Retry keeps its words and no empty button row', () => {
+    renderTranscript([question('First'), answer({ id: 'a1', displayText: '', interrupted: 'error', error: { class: 'providerBusy' } }), question('Second'), answer({ id: 'a2', displayText: 'Answered.' })]);
+    const card = screen.getByRole('alert');
+    expect(card).toHaveTextContent('Busy right now');
+    expect(card.querySelectorAll('button, div')).toHaveLength(0);
+  });
+
+  it('while an answer arrives, an earlier card offers no way to pick a model; once idle it does, with Retry only on the latest', () => {
+    const turns: ChatTurn[] = [question('First'), answer({ id: 'a1', displayText: '', interrupted: 'error', error: { class: 'modelUnavailable' } }), question('Second'), answer({ id: 'a2', displayText: 'arriving' })];
+    renderTranscript(turns, { status: 'streaming' });
+    expect(screen.queryByRole('button', { name: 'Open model menu' })).not.toBeInTheDocument();
+  });
+
+  it('while another answer arrives, the latest finished one offers no Retry', () => {
+    renderTranscript([question('First'), answer({ id: 'a1', displayText: 'Half an', interrupted: 'error' }), question('Second'), answer({ id: 'a2', displayText: 'arriving' })], { status: 'streaming' });
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });
 
@@ -109,10 +169,10 @@ describe('Transcript · Draw this flow', () => {
   const writeText = vi.fn<(text: string) => Promise<void>>(async () => {});
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
-  it('under a rendered diagram: the footer, Open in Excalidraw with its line and hint, and both chips', async () => {
+  it('under a rendered diagram: the footer, and Open in Excalidraw with its line and hint; no follow-up chips', async () => {
     writeText.mockClear();
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const props = renderTranscript([question('', { mode: 'draw', variant: 'business' }), answer({ displayText: DIAGRAM, stopReason: 'end' })]);
+    renderTranscript([question('', { mode: 'draw', variant: 'business' }), answer({ displayText: DIAGRAM, stopReason: 'end' })]);
     expect(screen.getByText('Draw')).toBeInTheDocument(); // the pill
     await waitFor(() => expect(screen.getByText(DIAGRAM_FOOTER('Anthropic'))).toBeInTheDocument());
     expect(screen.queryByText(/Names not in this flow/)).not.toBeInTheDocument();
@@ -130,37 +190,24 @@ describe('Transcript · Draw this flow', () => {
     // The clipboard was written before the tab opened.
     expect(writeText.mock.invocationCallOrder.at(-1)!).toBeLessThan(open.mock.invocationCallOrder[0]!);
 
-    await userEvent.click(screen.getByRole('button', { name: DRAW_CHIP.admins }));
-    expect(props.onDrawFollowUp).toHaveBeenCalledWith('admins');
-    await userEvent.click(screen.getByRole('button', { name: DRAW_CHIP.fromElement }));
-    expect(props.onDrawFollowUp).toHaveBeenCalledWith('fromElement');
+    // The other pictures are in the Actions menu, not under each one.
+    expect(screen.queryByRole('button', { name: 'Draw every element' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Draw one element' })).not.toBeInTheDocument();
     open.mockRestore();
   });
 
-  it('a picture in an ordinary typed answer gets the same footer, bar, and chips', async () => {
+  it('a picture in an ordinary typed answer gets the same footer and bar', async () => {
     renderTranscript([question('Draw the enterprise branch'), answer({ displayText: DIAGRAM, stopReason: 'end' })]);
     await waitFor(() => expect(screen.getByText(DIAGRAM_FOOTER('Anthropic'))).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Open in Excalidraw' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: DRAW_CHIP.admins })).toBeInTheDocument();
     expect(screen.queryByText('Draw')).not.toBeInTheDocument(); // no pill: it was typed
   });
 
-  it('with nowhere to send a follow-up, the chips are gone and the rest of the bar stays', async () => {
-    renderTranscript([question('', { mode: 'draw', variant: 'business' }), answer({ displayText: DIAGRAM, stopReason: 'end' })], { onDrawFollowUp: undefined });
-    await waitFor(() => expect(screen.getByText(DIAGRAM_FOOTER('Anthropic'))).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Open in Excalidraw' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'copy the Mermaid text' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: DRAW_CHIP.admins })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: DRAW_CHIP.fromElement })).not.toBeInTheDocument();
-  });
-
-  it('the every-element picture hides its own chip and names anything the flow does not have', async () => {
+  it('the every-element picture is not called simplified, and names anything the flow does not have', async () => {
     const admin = '```mermaid\nflowchart TD\n  Start --> CheckCustomerType{"CheckCustomerType"}\n  CheckCustomerType -->|Enterprise| Delete_Everything["Delete_Everything"]\n```';
     renderTranscript([question('Draw every element', { mode: 'draw', variant: 'admins' }), answer({ displayText: admin, stopReason: 'end' })]);
     await waitFor(() => expect(screen.getByText(new RegExp(UNKNOWN_NAMES(['Delete_Everything']).replace(/[.]/g, '\\.')))).toBeInTheDocument());
     expect(screen.getByText(/^Drawn by Anthropic from the saved version/)).toBeInTheDocument(); // not "simplified": it shows everything
-    expect(screen.queryByRole('button', { name: DRAW_CHIP.admins })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: DRAW_CHIP.fromElement })).toBeInTheDocument();
   });
 
   it('a diagram that will not draw: the line, the text, Try again re-sends, and no footer or bar', async () => {

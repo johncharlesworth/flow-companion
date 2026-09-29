@@ -1,8 +1,7 @@
-// Salesforce host handling for the side panel. Ported from the earlier build
-// background/sf-host.ts and messages.ts with the Setup-domain
-// tabs (*.my.salesforce-setup.com) map to the My-Domain host for the cookie
-// lookup and the Tooling API, exactly like Lightning tabs do. The strict
-// validation and its reject vectors come from the retired worker.
+// Salesforce host handling for the side panel. Setup-domain tabs
+// (*.my.salesforce-setup.com) map to the My-Domain host for the cookie lookup
+// and the Tooling API, exactly like Lightning tabs do. The Tooling host check
+// is strict, and its reject vectors are pinned in the unit suite.
 //
 // Invariant 3: the session cookie only ever goes to a host that passes
 // isToolingHost. Nothing here handles .mcas.ms (documented limitation).

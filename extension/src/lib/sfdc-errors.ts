@@ -1,5 +1,4 @@
-// Typed errors for the Salesforce Tooling API client. Ported from the
-// earlier build build; SfdcTimeoutError is new and is a
+// Typed errors for the Salesforce Tooling API client. SfdcTimeoutError is a
 // SfdcNetworkError so the UI treats a timeout like any other network failure.
 
 export class SfdcError extends Error {

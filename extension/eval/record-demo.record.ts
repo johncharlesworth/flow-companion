@@ -13,10 +13,10 @@
 // from the environment only and is never printed or written.
 //
 // Only when every recording ends normally with a usable answer are the two
-// files written: test/fixtures/synthetic-demo-answers.json (no longer
-// provisional) and test/fixtures/synthetic-demo-recorded-with.json. On any
-// failure nothing is written and the files on disk stay as they were. Read the
-// answers before committing them: they ship inside the package.
+// files written: test/fixtures/synthetic-demo-answers.json (with `provisional`
+// false) and test/fixtures/synthetic-demo-recorded-with.json. On any failure
+// nothing is written and the files on disk stay as they were. Read the answers
+// before committing them: they ship inside the package.
 
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';

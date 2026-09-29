@@ -1,4 +1,4 @@
-// The element index (lib/flow-outline.ts): built from the
+// The element index, built from the
 // flow JSON without any model call. Feeds the Outline disclosure, the Explain
 // picker, and the <focus_element> block's "reached from / connects to".
 
@@ -150,7 +150,6 @@ export function buildOutline(flow: unknown): FlowOutline {
   return { groups, elementCount, resourceCount, predecessors, successors };
 }
 
-/** "84 elements" (the size word was cut from the UI: the consequences are said in words where they matter) */
 /** "5 elements, 3 resources"; resources are left out when there are none, so the count matches the rows the outline opens to. */
 export function summaryLine(outline: FlowOutline): string {
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;

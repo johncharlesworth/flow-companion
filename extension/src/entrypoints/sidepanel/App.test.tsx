@@ -6,7 +6,7 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { setProviderKey } from '@/lib/key-storage';
 import { defaultSettings } from '@/lib/settings';
 
-import { OUTLINE_HINT, RECORDED_OUTLINE_HINT } from '@/components/ChatView';
+import { OUTLINE_HINT } from '@/components/ChatView';
 
 import { App } from './App';
 
@@ -101,15 +101,14 @@ describe('App', () => {
     expect(screen.getByText('This is a demo flow.')).toBeInTheDocument();
     expect(screen.getByText(/^The four actions below play real answers, recorded from .+\.$/)).toBeInTheDocument();
     expect(screen.getByText('Try one of the four')).toBeInTheDocument();
-    expect(screen.queryByText('Ready. Ask anything about this flow.')).not.toBeInTheDocument();
-    expect(screen.getByText(RECORDED_OUTLINE_HINT)).toBeInTheDocument();
-    expect(screen.queryByText(OUTLINE_HINT)).not.toBeInTheDocument();
+    expect(screen.queryByText('Ask anything about this flow.')).not.toBeInTheDocument();
+    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Claude Sonnet 5/ })).not.toBeInTheDocument(); // no model menu, even with a key
     const box = screen.getByLabelText('Message');
     expect(box).toBeDisabled();
     expect(box).toHaveAttribute('placeholder', 'Your API key has been accepted. Open a flow in Flow Builder to ask your own questions.');
     expect(screen.queryByRole('button', { name: 'Set up your AI' })).not.toBeInTheDocument(); // there is a key; the next step is a real flow
-    expect(screen.queryByRole('button', { name: 'Quick actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Actions' })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /^Overview/ }));
     expect(await screen.findByText(RECORDED_OVERVIEW)).toBeInTheDocument();
@@ -134,14 +133,13 @@ describe('App', () => {
     expect(screen.getByText('This is a demo flow.')).toBeInTheDocument();
     expect(screen.getByLabelText('Message')).toHaveAttribute('placeholder', 'Asking questions requires an API key, but you can demo one of the four actions above.');
     expect(screen.getByText('Try one of the four')).toBeInTheDocument();
-    expect(screen.queryByText('Ready. Ask anything about this flow.')).not.toBeInTheDocument();
-    for (const title of ['Overview', 'Explain an element', 'Document this flow', 'Draw this flow']) expect(screen.getByRole('button', { name: new RegExp(`^${title}`) })).toBeInTheDocument();
+    expect(screen.queryByText('Ask anything about this flow.')).not.toBeInTheDocument();
+    for (const title of ['Overview', 'Draw this flow', 'Document this flow', 'Explain an element']) expect(screen.getByRole('button', { name: new RegExp(`^${title}`) })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Questions to try' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Outline/ })).toBeInTheDocument(); // the outline stays, with its own hint
-    expect(screen.getByText(RECORDED_OUTLINE_HINT)).toBeInTheDocument();
-    expect(screen.queryByText(OUTLINE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument();
     expect(screen.getByLabelText('Message')).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Quick actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'About this flow: Customer Tier Routing Flow' })).not.toBeInTheDocument(); // no gauge in the demo
 
     await userEvent.click(screen.getByRole('button', { name: /^Overview/ }));
@@ -191,7 +189,7 @@ describe('App', () => {
     expect(screen.getByText(/^The four actions below play real answers, recorded from .+\.$/)).toBeInTheDocument();
     expect(screen.getByLabelText('Message')).toHaveAttribute('placeholder', 'Your API key has been accepted. Open a flow in Flow Builder to ask your own questions.');
     expect(screen.queryByText(/requires an API key/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Ready. Ask anything about this flow.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ask anything about this flow.')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Message')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Set up your AI' })).not.toBeInTheDocument();
     expect(fetchSpy.mock.calls.map(([input]) => String(input))).toEqual([expect.stringMatching(/\/v1\/models/)]); // the key check, and nothing else

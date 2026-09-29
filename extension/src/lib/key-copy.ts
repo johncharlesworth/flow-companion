@@ -1,6 +1,5 @@
-// The status line and hints under the key field.
-// Re-targeted from the earlier build test-connection-copy.ts onto validate-key's
-// result; the two prefix-hint strings are kept.
+// The status line and hints under the key field, from validate-key's result
+// and the key-format check.
 
 import { EXPECTED_PREFIX, type KeyFormatResult } from './key-format';
 import { type ProviderId, providerName } from './models';

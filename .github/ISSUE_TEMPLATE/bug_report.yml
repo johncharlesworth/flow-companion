@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in Flow Companion doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This page is public. Don't paste a real flow, a Download JSON file, record data, an org address, or an API key.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what the panel showed. Copy any message word for word.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Extension version
+      description: Shown on chrome://extensions, under Flow Companion.
+      placeholder: "1.0.1"
+    validations:
+      required: true
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome version
+      description: Shown on chrome://settings/help.
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI provider
+      options:
+        - Anthropic
+        - OpenAI
+        - Google
+        - The demo flow
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: Claude Sonnet 5
+  - type: input
+    id: size
+    attributes:
+      label: About how many elements the flow has
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before you submit
+      options:
+        - label: This report contains no real flow, record data, org address, or API key.
+          required: true

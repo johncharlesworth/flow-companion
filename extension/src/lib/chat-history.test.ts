@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 
-import { chatKey, clearChat, createChatWriter, getChat, GLOBAL_CAP_BYTES, PER_CHAT_CAP_BYTES, saveChat, type StoredChat, trimToCap } from './chat-history';
+import { chatKey, clearChat, createChatWriter, getChat, GLOBAL_CAP_BYTES, latestAnswerIndex, PER_CHAT_CAP_BYTES, saveChat, type StoredChat, trimToCap } from './chat-history';
 
 const turn = (role: 'user' | 'assistant', text: string, extra: Partial<StoredChat['turns'][number]> = {}) => ({ role, displayText: text, timestamp: 1, ...extra });
 
@@ -76,5 +76,26 @@ describe('chat history', () => {
       await writer.flushNow({ key: 'chat:a:b', turns: [turn('user', 'q')], updatedAt: 0 });
       expect((await getChat('chat:a:b'))?.turns).toHaveLength(1);
     });
+  });
+});
+
+describe('latestAnswerIndex', () => {
+  const u = (text: string) => ({ role: 'user' as const, displayText: text });
+  const a = (text: string) => ({ role: 'assistant' as const, displayText: text });
+  const n = (text: string) => ({ role: 'notice' as const, displayText: text });
+
+  it('is the last answer when nothing follows it', () => {
+    expect(latestAnswerIndex([u('q1'), a('a1'), u('q2'), a('a2')])).toBe(3);
+  });
+
+  it('skips notes after it: a model switch or a new version does not make the answer "earlier"', () => {
+    expect(latestAnswerIndex([u('q1'), a('a1'), n('Switched to Claude Opus 5.5')])).toBe(1);
+    expect(latestAnswerIndex([u('q1'), a('a1'), n('one'), n('two')])).toBe(1);
+  });
+
+  it('is -1 when a question has no answer after it yet, or there is no answer at all', () => {
+    expect(latestAnswerIndex([u('q1'), a('a1'), u('q2')])).toBe(-1);
+    expect(latestAnswerIndex([])).toBe(-1);
+    expect(latestAnswerIndex([n('Flow updated to v5 (Draft)')])).toBe(-1);
   });
 });

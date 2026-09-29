@@ -82,7 +82,7 @@ describe('useChatStream', () => {
     expect(calls[0]?.apiKey).toBe('test-key-wxyz');
     expect(calls[0]?.model).toEqual({ id: 'claude-sonnet-5', family: 'anthropic-5' });
     expect(calls[0]?.effort).toBe('medium');
-    expect(calls[0]?.maxOutputTokens).toBe(16_000);
+    expect(calls[0]?.maxOutputTokens).toBe(64_000); // Sonnet 5 thinks first, from the same allowance
 
     const stored = await getChat(flow.key);
     expect(stored?.turns.map((t) => [t.role, t.displayText, t.interrupted ?? null])).toEqual([
@@ -114,6 +114,31 @@ describe('useChatStream', () => {
     expect(answer).toMatchObject({ role: 'assistant', displayText: 'partial', interrupted: 'stopped' });
     expect(answer.error).toBeUndefined();
     expect((await getChat(flow.key))?.turns[1]).toMatchObject({ displayText: 'partial', interrupted: 'stopped' });
+  });
+
+  it('Retry still re-sends after a note follows the failed answer (a model switch), and keeps the note', async () => {
+    const { make, calls } = scriptedProvider((call) =>
+      call === 1
+        ? [{ type: 'text', text: 'half an ' }, { type: 'error', error: { class: 'interrupted' } }]
+        : [{ type: 'text', text: 'full answer' }, { type: 'usage', usage }, { type: 'stop', reason: 'end' }],
+    );
+    const { result } = renderHook(() => useChatStream({ flow, settings, makeProvider: make, measurer }));
+    await waitFor(() => expect(result.current.flowMeasure).not.toBeNull());
+    await act(async () => {
+      await result.current.send({ mode: 'ask', question: 'Why?' });
+    });
+    await waitFor(() => expect(result.current.status).toBe('idle'));
+    act(() => result.current.notice('Switched to Claude Opus 5.5'));
+    await act(async () => {
+      await result.current.retry();
+    });
+    await waitFor(() => expect(result.current.status).toBe('idle'));
+    expect(calls).toHaveLength(2);
+    expect(result.current.turns.map((t) => [t.role, t.displayText])).toEqual([
+      ['notice', 'Switched to Claude Opus 5.5'],
+      ['user', 'Why?'],
+      ['assistant', 'full answer'],
+    ]);
   });
 
   it('an error keeps the partial with its class; Retry removes it and re-sends the same question without a duplicate bubble', async () => {
@@ -177,21 +202,25 @@ describe('useChatStream', () => {
     expect(result.current.turns).toHaveLength(0);
   });
 
-  it('flags a mid-chat answer that did not reuse the flow, never the first answer, and nudges once when the chat gets long', async () => {
+  it('tracks whether each answer reused the flow, and nudges once when the chat gets long', async () => {
     const reused = { ...usage, inputTokens: 6_100, cachedInputTokens: 6_000 };
     const cold = { ...usage, inputTokens: 6_100, cachedInputTokens: 0 };
     const long = { ...usage, inputTokens: 700_000, cachedInputTokens: 6_000 };
     const { make } = scriptedProvider((call) => [{ type: 'text', text: 'a' }, { type: 'usage', usage: call === 1 ? cold : call === 2 ? reused : call === 3 ? cold : long }, { type: 'stop', reason: 'end' }]);
     const { result } = renderHook(() => useChatStream({ flow, settings, makeProvider: make, measurer }));
     await waitFor(() => expect(result.current.flowMeasure).not.toBeNull());
+    // reuse is read after every answer, not just the last: call 1 is cold (the
+    // first answer always is), 2 reuses, 3 goes cold again mid-chat, 4 reuses.
+    const reuseAfterEach: (boolean | null)[] = [];
     for (const q of ['1', '2', '3', '4']) {
       await act(async () => {
         await result.current.send({ mode: 'ask', question: q });
       });
       await waitFor(() => expect(result.current.status).toBe('idle'));
+      reuseAfterEach.push(result.current.lastReused);
     }
-    const answers = result.current.turns.filter((t) => t.role === 'assistant');
-    expect(answers.map((a) => a.reread ?? false)).toEqual([false, false, true, false]);
+    expect(reuseAfterEach).toEqual([false, true, false, true]);
+    expect(result.current.turns.filter((t) => t.role === 'assistant')).toHaveLength(4);
     expect(result.current.lastReused).toBe(true);
     expect(result.current.nudge).toBe(true);
     act(() => result.current.dismissNudge());

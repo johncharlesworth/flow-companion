@@ -1,7 +1,6 @@
 // Per-provider API keys, in chrome.storage.local when "Remember this key on
 // this computer" is on, in chrome.storage.session when it is off (invariant 4:
-// keys live only in chrome.storage). Ported from the earlier build
-// byok-key-storage.ts; ProviderId now comes from models.ts.
+// keys live only in chrome.storage).
 
 import { browser } from 'wxt/browser';
 

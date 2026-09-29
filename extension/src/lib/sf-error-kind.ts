@@ -1,7 +1,6 @@
 // Maps a thrown value from the Salesforce client to the error class the
-// panel's states are designed around (the empty and error states).
-// Ported from the earlier build side-panel/state.ts classify; deriveState was
-// not ported (the active-flow hook owns that logic now).
+// panel's states are designed around (the empty and error states). Which
+// state to show is the active-flow hook's job.
 
 import {
   ApiDisabledError,
@@ -32,8 +31,7 @@ export function classify(err: unknown): SfErrorKind {
   if (err instanceof ForbiddenError) return err.errorCode ? 'forbidden' : 'proxyBlocked';
   if (err instanceof SfdcNetworkError) return 'network';
   // Any other HTTP failure (404 for a deleted version, 5xx) is not an access
-  // problem; the earlier build code called it 'forbidden', which produced the
-  // wrong copy.
+  // problem, so it is not 'forbidden': that would show the wrong copy.
   if (err instanceof SfdcError) return 'unknown';
   return 'unknown';
 }

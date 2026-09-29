@@ -1,11 +1,10 @@
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'wxt';
 
-// Stack and manifest. The connect-src list
-// below makes the browser itself enforce invariant 3 (the Salesforce session
-// cookie only ever goes to My-Domain Tooling hosts) and the promise that
-// nothing leaves the browser except calls to your org and your chosen
-// provider.
+// Stack and manifest. The connect-src list below makes the browser itself
+// enforce invariant 3 (the Salesforce session cookie only ever goes to
+// My-Domain Tooling hosts) and the promise that nothing leaves the browser
+// except calls to your org and your chosen provider.
 const SALESFORCE_HOSTS = [
   'https://*.my.salesforce.com/*',
   'https://*.my.salesforce-setup.com/*',
@@ -22,9 +21,10 @@ const PROVIDER_HOSTS = [
  * calls the product exists for. `default-src 'self'` covers images, fonts,
  * frames, media, and workers, so a model-drawn diagram (a Mermaid image shape,
  * a CSS `url`) cannot make the panel fetch from a third host: "nothing goes
- * anywhere else" is then a browser rule, not a promise (security review). Inline styles stay allowed: React, Shiki, and Mermaid all set
- * `style` attributes, and Mermaid writes a <style> into its SVG. In
- * development builds the dev server's origin and reload socket are allowed.
+ * anywhere else" is then a browser rule, not a promise. Inline styles stay
+ * allowed: React, Shiki, and Mermaid all set `style` attributes, and Mermaid
+ * writes a <style> into its SVG. In development builds the dev server's origin
+ * and reload socket are allowed.
  */
 function extensionPagesCsp(development: boolean): string {
   const devHttp = development ? ' http://localhost:*' : '';
@@ -47,13 +47,13 @@ export default defineConfig({
   imports: false,
   // The gallery (every screen on one page, for review and the contact sheets)
   // is a development page. It is built only when asked for, so the package a
-  // user installs holds the panel and its background script and nothing else
-  // (security review). `npm run screenshots` sets the variable.
+  // user installs holds the panel and its background script and nothing else.
+  // `npm run screenshots` sets the variable.
   filterEntrypoints: process.env.WXT_GALLERY ? undefined : ['background', 'sidepanel'],
   manifest: (env) => ({
     name: 'Flow Companion for Salesforce',
     // The store shows this as the listing's summary and the dashboard cannot
-    // edit it, so the approved store line lives here (132-character limit).
+    // edit it, so the store line lives here (132-character limit).
     description:
       'Chat with your Salesforce flows using the AI model of your choice.',
     minimum_chrome_version: '114',

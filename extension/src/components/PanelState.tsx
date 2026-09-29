@@ -22,8 +22,10 @@ export function PanelState({ icon: Icon, title, body, note, action, link }: Pane
       <div className="mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-accent-subtle">
         <Icon className="h-8 w-8 text-accent" strokeWidth={1.75} aria-hidden="true" />
       </div>
-      <h2 className="text-[15px] font-semibold text-text-1">{title}</h2>
-      <p className="mt-1 max-w-[42ch] text-text-2">{body}</p>
+      {/* 17px, the website's card headings: at 15px it barely stands above the 14px sentence in Plex. */}
+      <h2 className="text-[17px] font-semibold text-text-1">{title}</h2>
+      {/* text-pretty: no one-word last line ("Flow." alone under "Not on Salesforce"). */}
+      <p className="mt-1 max-w-[42ch] text-pretty text-text-2">{body}</p>
       {note && <p className="mt-3 max-w-[42ch] text-xs text-text-3">{note}</p>}
       {action && (
         <Button className="mt-5" onClick={action.onClick}>

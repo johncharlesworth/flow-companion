@@ -1,6 +1,6 @@
 {
   "name": "flow-companion",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Chrome side-panel extension: chat about the Salesforce Flow you have open, with your own AI key.",
   "license": "GPL-3.0-only",

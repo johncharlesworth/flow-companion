@@ -51,9 +51,6 @@ describe('settings record', () => {
     expect(keyStorageMode(notRemembered)).toBe('session');
     expect(await readiness(notRemembered)).toEqual({ ready: false, forgotten: true, unchecked: false });
 
-    expect(normalizeSettings({ resizeTipDone: true }).resizeTipDone).toBe(true);
-    expect(normalizeSettings({ resizeTipDone: 'yes' }).resizeTipDone).toBe(false);
-
     // A key whose check never completed is saved but not ready; the panel says to check it again.
     const unchecked = { ...validated, keys: { ...validated.keys, anthropic: { ...validated.keys.anthropic, status: 'unchecked' as const } } };
     await setProviderKey('anthropic', 'k', 'local');

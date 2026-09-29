@@ -100,7 +100,7 @@ describe('useChatStream · recorded', () => {
     expect(makeProvider).not.toHaveBeenCalled();
   });
 
-  it('a second action raises no re-read flag and no long-chat nudge', async () => {
+  it('a second action raises no long-chat nudge', async () => {
     const { result } = renderHook(() => useChatStream({ flow, settings, recorded: true, makeProvider, measurer }));
     for (const mode of ['overview', 'document'] as const) {
       await act(async () => {
@@ -109,9 +109,9 @@ describe('useChatStream · recorded', () => {
       await waitFor(() => expect(result.current.status).toBe('idle'));
     }
     const answers = result.current.turns.filter((t) => t.role === 'assistant');
-    expect(answers.map((a) => [a.displayText, a.stopReason, a.reread ?? false])).toEqual([
-      [ANSWERS.overview, 'end', false],
-      [ANSWERS.document, 'end', false],
+    expect(answers.map((a) => [a.displayText, a.stopReason])).toEqual([
+      [ANSWERS.overview, 'end'],
+      [ANSWERS.document, 'end'],
     ]);
     expect(result.current.nudge).toBe(false);
     expect(result.current.lastReused).toBeNull();

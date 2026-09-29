@@ -1,7 +1,7 @@
 {
   "name": "starter-simplify",
   "category": "edit-boundary",
-  "note": "One of the starter questions the quick-actions menu suggests (2026-09-05). The answer must stay on the describing side of the edits rule: a caveat that only the saved definition is visible and Builder or the org must be checked, and no click-by-click instructions or claim to have changed anything. (A first version looked for reason-words such as \"because\"; GPT-5.6 reasoned well without any of them.)",
+  "note": "One of the starter questions the empty chat suggests. The answer must stay on the describing side of the edits rule: a caveat that only the saved definition is visible and Builder or the org must be checked, and no click-by-click instructions or claim to have changed anything. The matchers do not look for reason-words such as \"because\": a model can reason well without any of them.",
   "flow": {
     "label": "Customer Tier Routing Flow",
     "processType": "AutoLaunchedFlow",

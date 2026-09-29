@@ -26,9 +26,7 @@ export interface StoredTurn {
   stopReason?: StopReason;
   /** The answer did not finish normally: stopped by the user, or an error/close mid-stream. */
   interrupted?: 'stopped' | 'error';
-  /** The provider re-read the whole flow for this answer (mid-chat, no reuse). */
-  reread?: boolean;
-  /** The provider's usage report for a finished answer, so the flow chip's numbers survive a tab switch or a reopened panel. */
+  /** The provider's usage report for a finished answer, so the gauge's numbers survive a tab switch or a reopened panel. */
   usage?: Usage;
   timestamp: number;
 }
@@ -42,6 +40,22 @@ export interface StoredChat {
 export const CHAT_KEY_PREFIX = 'chat:';
 export const PER_CHAT_CAP_BYTES = 200 * 1024;
 export const GLOBAL_CAP_BYTES = 5 * 1024 * 1024;
+
+/**
+ * The latest answer: the last assistant turn with nothing after it but notes
+ * ("Switched to …", "Flow updated to …"). It is the one answer that can be
+ * retried, continued or redrawn, and the one an arriving answer streams into; a
+ * note posted after it must not make it read as an earlier answer. -1 when a
+ * question is still waiting for its answer, or there is none.
+ */
+export function latestAnswerIndex(turns: readonly { role: string }[]): number {
+  for (let i = turns.length - 1; i >= 0; i--) {
+    const role = turns[i]!.role;
+    if (role === 'assistant') return i;
+    if (role !== 'notice') return -1;
+  }
+  return -1;
+}
 
 export function chatKey(orgId: string | null, definitionId: string): string {
   return `${CHAT_KEY_PREFIX}${orgId ?? 'unknown'}:${definitionId}`;

@@ -84,7 +84,8 @@ export const READY_SETTINGS = {
         { id: 'claude-sonnet-5', maxInputTokens: 1_000_000 },
         { id: 'claude-haiku-4-5-20251001', maxInputTokens: 200_000 },
       ],
-      checkedAt: 1,
+      // Checked just now, so the once-a-day model list refresh stays out of every spec but its own.
+      checkedAt: Date.now(),
     },
     openai: { status: 'unset', last4: null, models: [], checkedAt: null },
     google: { status: 'unset', last4: null, models: [], checkedAt: null },

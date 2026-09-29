@@ -62,7 +62,7 @@ describe('isToolingHost — accept vectors', () => {
   });
 });
 
-describe('isToolingHost — reject vectors (the retired worker\'s 20, plus the Setup domain)', () => {
+describe('isToolingHost — reject vectors, the Setup domain included', () => {
   it.each([
     '',
     'evil.example',

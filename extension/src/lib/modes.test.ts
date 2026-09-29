@@ -45,6 +45,12 @@ describe('assembleUserTurn', () => {
   it('Document reserves more output and caps OpenAI effort at medium', () => {
     expect(maxOutputTokensFor('document')).toBe(48_000);
     expect(maxOutputTokensFor('ask')).toBe(16_000);
+    // A model that thinks first spends the same allowance on thinking: four times the room, within its own 128K ceiling.
+    expect(maxOutputTokensFor('ask', 'anthropic-5')).toBe(64_000);
+    expect(maxOutputTokensFor('draw', 'openai-5.6')).toBe(64_000);
+    expect(maxOutputTokensFor('document', 'anthropic-5')).toBe(128_000);
+    expect(maxOutputTokensFor('ask', 'anthropic-haiku')).toBe(16_000);
+    expect(maxOutputTokensFor('ask', 'google-3')).toBe(16_000);
     expect(capEffortForMode('high', 'document', 'openai-5.6')).toBe('medium');
     expect(capEffortForMode('high', 'document', 'anthropic-5')).toBe('high');
     expect(capEffortForMode('high', 'ask', 'openai-5.6')).toBe('high');
@@ -80,6 +86,11 @@ describe('Draw this flow', () => {
     expect(turn.sentText).toContain(focusElementBlock(focus));
     expect(drawContract('fromElement')).toContain('<focus_element>');
     expect(drawContract('fromElement')).toContain('what surrounds it');
+    // Forty elements leading into one would draw as a 40-wide row, 11,020px squeezed into the panel, so
+    // alike elements that lead straight in become one box, and nothing unlike is ever grouped.
+    expect(drawContract('fromElement')).toMatch(/more than five elements lead straight into it and they are the same type of element doing the same job/);
+    expect(drawContract('fromElement')).toMatch(/never group elements of different types, a decision with anything else, or elements that lead to different places/);
+    expect(drawContract('admins')).not.toMatch(/as one box/);
     expect(turn.sentText).toContain('<user_question>\nDraw this flow around CheckCustomerType.\n</user_question>');
   });
 

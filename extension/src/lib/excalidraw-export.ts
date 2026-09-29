@@ -14,7 +14,7 @@ export function pasteKey(userAgent: string = typeof navigator === 'undefined' ? 
   return /Mac|iPhone|iPad/.test(userAgent) ? '⌘V' : 'Ctrl+V';
 }
 
-/** Always visible in the diagram bar, before the click (a real-Chrome check: the shortcut was not obvious). */
+/** Always visible in the diagram bar, before the click, because the paste shortcut is not obvious. */
 export const excalidrawInstruction = (key = pasteKey()) => `Opens excalidraw.com in a new tab with the picture on your clipboard. Paste it there with ${key} to edit it.`;
 /** The quiet alternative at the end of that line, for people who know Mermaid: a link, never a second button. */
 export const MERMAID_COPY_LINK = 'copy the Mermaid text';

@@ -1,31 +1,50 @@
 # Contributing
 
-Thanks for considering a contribution. This is a small, focused project: chat about the Flow you have open. We say no to scope creep so the product stays easy for everyday admins.
+Thanks for considering a contribution. Flow Companion is a small, focused project: chat about the Flow you have open.
 
-This repository receives a snapshot at each release, so it carries no day-to-day history. Issues and pull requests are read here and folded into the next release; a merged change appears with that release rather than as its own commit.
-
-## Filing issues
-
-- **Bugs:** include the extension version, the Chrome version, which provider and model you used, and what the panel said. If a flow is involved, say roughly how large it is; never paste a real flow or real record data into an issue.
-- **Feature requests:** describe the situation before the proposed UI.
-- **Security issues:** never as a public issue. See [`SECURITY.md`](./SECURITY.md).
-
-## Pull requests
-
-1. Open an issue first for anything beyond a small fix, so the approach is agreed before code is written.
-2. Branch from `main`; one change per PR; small conventional commits (`feat(ext): …`, `fix(ext): …`, `docs: …`).
-3. Tests first for anything pure (parsers, the registry, prompt assembly, the size estimate). Run `npm run check` in `extension/` before opening the PR; it runs the PII scan, lint, typecheck, unit tests, build, bundle-size check, and the Playwright specs in CI order.
-4. Any change to the system prompt, the model registry, or a provider adapter must be accompanied by a re-run of the grounding eval (`npm run eval`) with the results committed.
-5. The PII scanner blocks real Salesforce ids, tenant hosts, provider keys, and local paths. `--no-verify` is not acceptable. If the scanner flags a synthetic literal, add it to `scripts/pii-allowlist.txt` with a one-line explanation of why it is synthetic.
-6. Contributions are accepted under the project's licence, GPL-3.0, on the same terms as the rest of the code, and you keep the copyright to what you write. By opening a pull request you confirm you have the right to contribute what you send.
+Issues and pull requests are welcome. This repository is updated once per release, as a single commit, so an accepted pull request isn't merged on its own: its changes arrive with the next release, and that release's notes on GitHub name everyone whose changes it includes.
 
 ## Scope
 
-The extension explains a flow and never changes Salesforce, keeps no backend and no telemetry, and holds to the seven invariants in [`SECURITY.md`](./SECURITY.md). Proposals that move outside that are best raised as an issue first, so nobody builds something that cannot land.
+Flow Companion reads a flow and explains it. It never changes anything in Salesforce, has no backend, and collects no telemetry. Every change must keep the seven invariants in [`SECURITY.md`](./SECURITY.md). For anything outside that, open an issue before you write code.
+
+## Filing issues
+
+- **Bugs:** include the extension version (shown on `chrome://extensions`), your Chrome version, the provider and model you used, and what the panel said. If a flow is involved, say roughly how many elements it has. Never paste or attach a real flow (including a **Download JSON** file) or real record data.
+- **Feature requests:** describe what you're trying to do, then the UI you have in mind.
+- **Security issues:** never as a public issue. See [`SECURITY.md`](./SECURITY.md).
+
+## Setup
+
+You need Node 24 (22.18 or later works) and npm.
+
+```bash
+bash scripts/install-git-hooks.sh   # installs the pre-commit PII check
+cd extension
+npm install
+npx playwright install chromium     # once, for the Playwright specs
+npm run build
+```
+
+Load `extension/.output/chrome-mv3/` from `chrome://extensions` (**Developer mode** → **Load unpacked**). With no Salesforce org, use the demo flow: **See it on a demo flow first** on the panel's first screen, or **Try a demo flow** at the bottom of Settings. [`extension/README.md`](./extension/README.md) describes the other commands.
+
+## Pull requests
+
+1. For anything bigger than a small fix, open an issue first to agree on the approach.
+2. Branch from `main`. One change per pull request, in small conventional commits (`feat(ext): …`, `fix(ext): …`, `docs: …`).
+3. Write tests first for anything pure (parsers, the model registry, prompt assembly, the size estimate).
+4. Run `npm run check` in `extension/` before you open the pull request. It runs the PII scan, lint, typecheck, unit tests, build, bundle-size check, and Playwright specs, in CI order.
+5. Try the production build in Chrome on a real Flow Builder page or the demo flow.
+6. If you change the system prompt (`extension/src/prompts/`), the model registry (`extension/src/lib/models.ts`), or a provider adapter (`extension/src/lib/providers/`), re-run the grounding eval with `npm run eval` and commit the results. It needs your own API key; see [`extension/README.md`](./extension/README.md).
+7. Contributions are licensed under GPL-3.0, like the rest of the code, and you keep the copyright to what you write. By opening a pull request, you confirm you have the right to contribute it.
+
+## The PII scanner
+
+The pre-commit hook blocks a commit, and CI fails, when a file contains anything that looks like a Salesforce ID, org host, email address, Anthropic or OpenAI key, or local file path, or when a blocked file such as `.DS_Store` is added. The scanner matches patterns: it can't tell a real value from a made-up one. Don't bypass the hook with `--no-verify`. If it flags a value you made up for a test, add that value to `scripts/pii-allowlist.txt` on its own line, with a `#` comment line above it saying it's synthetic.
 
 ## Style
 
-TypeScript strict; functional React with hooks; Tailwind tokens from `src/styles/app.css` only; comments only where the *why* is not obvious. Copy is for everyday Salesforce admins and names the provider (Anthropic, OpenAI, Google) rather than saying "the API".
+TypeScript strict, functional React with hooks, and Tailwind tokens from `extension/src/styles/app.css` only. Add a comment only where the reason for the code isn't obvious. Copy is for everyday Salesforce admins and names the provider (Anthropic, OpenAI, Google) instead of saying "the API".
 
 ## Code of conduct
 

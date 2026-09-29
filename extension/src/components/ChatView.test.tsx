@@ -12,9 +12,9 @@ import { setProviderKey } from '@/lib/key-storage';
 import { type ProviderId, providerName } from '@/lib/models';
 import { defaultSettings, type Settings } from '@/lib/settings';
 
-import { ChatView, type ChatViewProps, OUTLINE_HINT, RECORDED_BANNER, RECORDED_HEADING, RECORDED_OUTLINE_HINT, SAMPLE_FLOW_BANNER_ID, TRY_ANOTHER } from './ChatView';
+import { ChatView, type ChatViewProps, OUTLINE_HINT, RECORDED_BANNER, RECORDED_HEADING, SAMPLE_FLOW_BANNER_ID, TRY_ANOTHER } from './ChatView';
 import type { HeaderFlow } from './Header';
-import { DIAGRAM_FOOTER, DRAW_CHIP } from './Transcript';
+import { DIAGRAM_FOOTER } from './Transcript';
 import { TooltipProvider } from './ui/tooltip';
 
 const ANSWERS = {
@@ -89,17 +89,16 @@ describe('ChatView · the demo flow with no key', () => {
 
     expect(screen.getByText(RECORDED_HEADING)).toBeInTheDocument();
     expect(RECORDED_HEADING).toBe('Try one of the four');
-    expect(screen.queryByText('Ready. Ask anything about this flow.')).not.toBeInTheDocument();
-    for (const title of ['Overview', 'Explain an element', 'Document this flow', 'Draw this flow']) expect(screen.getByRole('button', { name: new RegExp(`^${title}`) })).toBeInTheDocument();
+    expect(screen.queryByText('Ask anything about this flow.')).not.toBeInTheDocument();
+    for (const title of ['Overview', 'Draw this flow', 'Document this flow', 'Explain an element']) expect(screen.getByRole('button', { name: new RegExp(`^${title}`) })).toBeInTheDocument();
 
     expect(screen.queryByRole('button', { name: 'Questions to try' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Outline/ })).toBeInTheDocument();
-    expect(screen.getByText(RECORDED_OUTLINE_HINT)).toBeInTheDocument();
-    expect(screen.queryByText(OUTLINE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument();
 
     expect(screen.queryByRole('button', { name: new RegExp(LABEL) })).not.toBeInTheDocument(); // no model menu
     expect(screen.queryByText(new RegExp(`Recorded from ${LABEL}`))).not.toBeInTheDocument(); // the banner names the model once
-    expect(screen.queryByRole('button', { name: 'Quick actions' })).not.toBeInTheDocument(); // the cards, then the chip row
+    expect(screen.queryByRole('button', { name: 'Actions' })).not.toBeInTheDocument(); // the cards, then the chip row
     expect(screen.queryByRole('button', { name: /^About this flow/ })).not.toBeInTheDocument(); // no gauge: nothing is sent, so there is nothing to count
     expect(screen.getByLabelText('Message')).toBeDisabled();
     expect(screen.getByLabelText('Message')).toHaveAttribute('aria-describedby', SAMPLE_FLOW_BANNER_ID);
@@ -129,27 +128,26 @@ describe('ChatView · the demo flow with no key', () => {
     await userEvent.click(within(screen.getByRole('group', { name: TRY_ANOTHER.group })).getByRole('button', { name: 'Document this flow' }));
     expect(await screen.findByText('A document of the demo flow.')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument());
-    expect(screen.queryByText(/re-read the whole flow/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/read the whole flow again/)).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('picking an element in the Explain picker plays its answer at once, with no chip left on the message box', async () => {
+  it('picking an element in the Explain picker plays its answer at once', async () => {
     renderChat({ recorded: true });
     await userEvent.click(screen.getByRole('button', { name: /^Explain an element/ }));
     await userEvent.type(screen.getByLabelText('Search elements'), 'Check');
     await userEvent.click(screen.getByRole('option', { name: /CheckCustomerType/ }));
     expect(await screen.findByText(ANSWERS.explain.CheckCustomerType!)).toBeInTheDocument();
     expect(screen.getByText('Explain')).toBeInTheDocument(); // the pill
-    expect(screen.queryByRole('button', { name: 'Remove CheckCustomerType' })).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('the outline under the cards lists the demo flow’s elements with its own hint, and picking one plays its explanation at once', async () => {
+  it('the outline under the cards lists the demo flow’s elements with the hint, and picking one plays its explanation at once', async () => {
     renderChat({ recorded: true });
-    expect(RECORDED_OUTLINE_HINT).toBe('Pick one to see it explained.');
-    expect(screen.getByText(RECORDED_OUTLINE_HINT)).toBeInTheDocument();
+    expect(OUTLINE_HINT).toBe('Pick one to see it explained.');
+    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Outline/ }));
-    expect(screen.queryByText(RECORDED_OUTLINE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument(); // still there with the list open: a click explains at once
     expect(screen.getByRole('listbox', { name: 'Flow elements' })).toBeInTheDocument();
     // The same groups as the live outline, collapsed until opened.
     await userEvent.click(screen.getByRole('button', { name: /^Decisions/ }));
@@ -161,7 +159,6 @@ describe('ChatView · the demo flow with no key', () => {
     expect(await screen.findByText(ANSWERS.explain.CheckCustomerType!)).toBeInTheDocument();
     expect(screen.getByText('Explain')).toBeInTheDocument(); // the pill
     expect(screen.getByText('CheckCustomerType')).toBeInTheDocument(); // the turn's focus element, beside it
-    expect(screen.queryByRole('button', { name: 'Remove CheckCustomerType' })).not.toBeInTheDocument(); // nothing attached to the message box
     expect(screen.queryByRole('listbox', { name: 'Flow elements' })).not.toBeInTheDocument(); // the conversation took the outline's place
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -173,8 +170,7 @@ describe('ChatView · the demo flow with no key', () => {
     expect(document.querySelector('svg[data-test="drawn"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Open in Excalidraw' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'copy the Mermaid text' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: DRAW_CHIP.admins })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: DRAW_CHIP.fromElement })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Draw every element' })).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -197,7 +193,7 @@ describe('ChatView · the demo flow with no key', () => {
   });
 
   describe('the "Try another" row', () => {
-    const CHIPS = ['Overview', 'Explain an element', 'Document this flow', 'Draw this flow'];
+    const CHIPS = ['Overview', 'Draw this flow', 'Document this flow', 'Explain an element'];
     const row = () => screen.getByRole('group', { name: TRY_ANOTHER.group });
 
     it('is absent before the first answer', () => {
@@ -259,18 +255,18 @@ describe('ChatView · the demo flow with a key', () => {
     fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('the demo flow must not use the network, key or no key'));
   });
 
-  it('still plays the recording: the banner is the same two sentences, the box points at Flow Builder, and there is no setup link, model menu, plus, or gauge', async () => {
+  it('still plays the recording: the banner is the same two sentences, the box points at Flow Builder, and there is no setup link, model menu, Actions, or gauge', async () => {
     renderChat({ recorded: true, keyReady: true, settings: READY });
     const banner = screen.getByText(RECORDED_BANNER.rest(LABEL));
     expect(banner).toHaveTextContent(`This is a demo flow. The four actions below play real answers, recorded from ${LABEL}.`);
     expect(banner).not.toHaveTextContent(/API key|Flow Builder/);
     expect(screen.queryByText(/requires an API key/)).not.toBeInTheDocument();
     expect(screen.getByText(RECORDED_HEADING)).toBeInTheDocument();
-    expect(screen.queryByText('Ready. Ask anything about this flow.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ask anything about this flow.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Questions to try' })).not.toBeInTheDocument();
-    expect(screen.getByText(RECORDED_OUTLINE_HINT)).toBeInTheDocument();
+    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Claude Sonnet 5/ })).not.toBeInTheDocument(); // no model menu, even though the key has one
-    expect(screen.queryByRole('button', { name: 'Quick actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Set up your AI' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^About this flow/ })).not.toBeInTheDocument(); // no gauge
     expect(screen.getByRole('button', { name: 'Send' }).parentElement!.querySelectorAll('button')).toHaveLength(1); // Send alone on the bottom row
@@ -295,16 +291,15 @@ describe('ChatView · a real flow with a key', () => {
     await setProviderKey('anthropic', 'test-key-wxyz', 'local');
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ input_tokens: 1_200 }), { status: 200 }));
     renderChat({ settings });
-    expect(screen.getByText('Ready. Ask anything about this flow.')).toBeInTheDocument();
+    expect(screen.getByText('Ask anything about this flow.')).toBeInTheDocument();
     expect(screen.queryByText(RECORDED_HEADING)).not.toBeInTheDocument();
     expect(screen.queryByText(/This is a demo flow/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Questions to try' })).toBeInTheDocument();
-    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument();
-    expect(screen.queryByText(RECORDED_OUTLINE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByText(OUTLINE_HINT)).toBeInTheDocument(); // the same hint as the demo: a pick explains at once
     expect(screen.getByRole('button', { name: /Claude Sonnet 5/ })).toBeInTheDocument();
     expect(screen.getByLabelText('Message')).toBeEnabled();
     expect(screen.getByLabelText('Message')).not.toHaveAttribute('aria-describedby');
-    expect(screen.getByRole('button', { name: 'Quick actions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'About this flow: Customer Tier Routing Flow' })).toBeInTheDocument(); // the gauge, live only
     expect(screen.queryByRole('button', { name: 'Set up your AI' })).not.toBeInTheDocument();
   });
@@ -326,6 +321,6 @@ describe('ChatView · a real flow with a key', () => {
     expect(await screen.findByText('An answer from earlier.')).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: TRY_ANOTHER.group })).not.toBeInTheDocument();
     expect(screen.queryByText(TRY_ANOTHER.label)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Quick actions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions' })).toBeInTheDocument();
   });
 });

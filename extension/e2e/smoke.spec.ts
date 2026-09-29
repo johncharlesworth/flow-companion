@@ -95,5 +95,16 @@ test('the side panel page renders the placeholder', async ({ context, extensionI
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Flow Companion');
   await page.screenshot({ path: 'test-results/sidepanel-placeholder.png' });
 
+  // The panel is set in IBM Plex Sans at 14px. Chrome injects its own system-font
+  // body rule into extension pages, which can silently win over the panel's.
+  const font = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const body = getComputedStyle(document.body);
+    return { family: body.fontFamily, size: body.fontSize, loaded: document.fonts.check('14px "IBM Plex Sans"') };
+  });
+  expect(font).toEqual({ family: '"IBM Plex Sans", system-ui, sans-serif', size: '14px', loaded: true });
+  // A state's sentence never leaves one word alone on its last line.
+  expect(await page.locator('section p').first().evaluate((el) => getComputedStyle(el).textWrapStyle)).toBe('pretty');
+
   expect(errors).toEqual([]);
 });

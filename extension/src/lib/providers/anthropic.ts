@@ -1,4 +1,4 @@
-// Anthropic Messages API adapter (Anthropic rules).
+// Anthropic Messages API adapter.
 // Hand-rolled fetch: no SDK, no retries (invariant 1).
 
 import { classifyByStatus, type ErrorBody, streamRequest } from './http';

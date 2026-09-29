@@ -1,7 +1,7 @@
 // The size story: how big the flow is in tokens, said in
 // words; whether an answer reused the flow; when a chat is getting long; and
 // the one place numbers appear, the chip's hover line. Nothing here is ever
-// shown as a number except through hoverSummary and hoverRows (the flow chip).
+// shown as a number except through hoverSummary and hoverRows (the gauge in the message box).
 
 import { type ProviderId, providerName } from './models';
 
@@ -17,7 +17,7 @@ export function sizeWord(tokens: number): SizeWord {
   return 'very large';
 }
 
-/** Characters per token, conservative against the Phase 5 corpus; Anthropic's is its own rule of thumb for the 4.7+ tokenizer. */
+/** Characters per token, set on the conservative side; Anthropic's is its own rule of thumb for the 4.7+ tokenizer. */
 export const CHARS_PER_TOKEN: Record<ProviderId, number> = { anthropic: 2.5, openai: 3, google: 3 };
 
 export function estimateTokens(text: string, provider: ProviderId): number {
@@ -53,14 +53,14 @@ export function isChatGettingLong(args: Parameters<typeof longChatRatio>[0]): bo
 const formatCount = (n: number) => new Intl.NumberFormat('en-US').format(Math.round(n));
 
 /** The chip's hover line: the provider's own numbers, thousands separators, no rounding, no tilde. */
-/** The flow chip's hover, one line: what reuse did on the last question, or the first question's size. */
+/** The gauge's hover, one line: what reuse did on the last question, or the first question's size. */
 export function hoverSummary(usage: UsageReport, provider: ProviderId): string {
   return usage.cachedInputTokens > 0
     ? `Last question: ${formatCount(usage.cachedInputTokens)} of ${formatCount(usage.inputTokens)} tokens reused from ${providerName(provider)}’s memory`
     : `First question: ${formatCount(usage.inputTokens)} tokens sent, ${formatCount(usage.outputTokens)} in the answer`;
 }
 
-/** The flow chip's pinned card: the same numbers as labelled rows. */
+/** The gauge's pinned card: the same numbers as labelled rows. */
 export function hoverRows(usage: UsageReport, provider: ProviderId): [label: string, value: string][] {
   return [
     ['Sent', `${formatCount(usage.inputTokens)} tokens`],

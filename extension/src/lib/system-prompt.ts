@@ -1,5 +1,5 @@
 // The system prompt: prompts/system-prompt-v1.md verbatim (heading stripped)
-// plus the precedence paragraph . One loader is used
+// plus the precedence paragraph below. One loader is used
 // by the bundle, the snapshot test, and the grounding eval, so they share
 // bytes. Any change here needs the grounding eval re-run (invariant 6).
 import rawPrompt from '@/prompts/system-prompt-v1.md?raw';

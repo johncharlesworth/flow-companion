@@ -1,5 +1,5 @@
 // Loading: a skeleton of the header, the greeting line, and three chip-shaped
-// blocks, with the composer rendered but disabled.
+// blocks, with a dimmed block where the message box sits.
 
 export function Skeleton() {
   return (

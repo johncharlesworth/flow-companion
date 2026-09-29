@@ -10,6 +10,7 @@ const picker = buildPicker(
   'anthropic',
   [
     { id: 'claude-sonnet-5', maxInputTokens: 1_000_000 },
+    { id: 'claude-opus-5-5', maxInputTokens: 1_000_000 },
     { id: 'claude-opus-5', maxInputTokens: 1_000_000 },
     { id: 'claude-haiku-4-5-20251001', maxInputTokens: 200_000 },
     { id: 'claude-sonnet-4-6', maxInputTokens: 1_000_000 },
@@ -24,16 +25,16 @@ describe('ModelMenu', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sonnet 5' }));
     expect(await screen.findByText('Switching models re-sends the whole flow once.')).toBeInTheDocument();
     expect(screen.getByText('Recommended for most flows')).toBeInTheDocument();
-    expect(screen.getByText('Most capable — slower and costs more')).toBeInTheDocument();
+    expect(screen.getByText('Most capable — best for complex flows')).toBeInTheDocument();
     expect(screen.getByText('too small for this flow')).toBeInTheDocument();
     expect(screen.getAllByText('1M').length).toBeGreaterThan(0);
     const haiku = screen.getByRole('menuitem', { name: /Claude Haiku 4\.5/ });
     expect(haiku).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByRole('menuitem', { name: /More models \(1\)/ })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Pricing/ })).toHaveAttribute('href', 'https://www.anthropic.com/pricing');
+    expect(screen.getByRole('menuitem', { name: /More models \(2\)/ })).toBeInTheDocument(); // Opus 5 and Sonnet 4.6
+    expect(screen.getByRole('link', { name: /Pricing/ })).toHaveAttribute('href', 'https://platform.claude.com/docs/en/about-claude/pricing'); // the API's prices, not the chat plans
 
-    await userEvent.click(screen.getByRole('menuitem', { name: /Claude Opus 5/ }));
-    expect(onSelect).toHaveBeenCalledWith('claude-opus-5');
+    await userEvent.click(screen.getByRole('menuitem', { name: /Claude Opus 5\.5/ }));
+    expect(onSelect).toHaveBeenCalledWith('claude-opus-5-5');
   });
 
   it('expands More models in place', async () => {

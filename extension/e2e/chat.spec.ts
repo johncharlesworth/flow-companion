@@ -4,7 +4,7 @@ import { expect, test } from './extension.fixture';
 import { installProviderMock, messageCalls, type ProviderMockConfig, providerCalls } from './provider-mock';
 import { CHAT_KEY, FLOW_A, FLOW_A_LABEL, mockSalesforce, readStorage, seedReadyKey, seedStorage } from './salesforce.mock';
 
-// The step-7 end-to-end check, in a real Chromium: paste a key
+// The chat end to end, in a real Chromium: paste a key
 // and chat against a paced SSE mock; a 12-message transcript keeps the composer
 // visible at 320px; Enter during streaming is ignored; Stop keeps the partial;
 // a Settings round-trip keeps the transcript; a Document answer keeps streaming
@@ -73,7 +73,7 @@ test('first run: paste a key, start chatting, and stream an answer about the ope
   await flowTab.goto(FLOW_A);
   await flowTab.bringToFront();
   await expect(panel.getByRole('heading', { level: 1 })).toHaveText(FLOW_A_LABEL);
-  await expect(panel.getByText('Ready. Ask anything about this flow.')).toBeVisible();
+  await expect(panel.getByText('Ask anything about this flow.')).toBeVisible();
   await expect(panel.getByRole('button', { name: `About this flow: ${FLOW_A_LABEL}` })).toBeVisible(); // the gauge, named after the flow
   await expect(panel.getByText(FLOW_A_LABEL)).toHaveCount(1); // the header; the message box no longer repeats the name
 
@@ -93,7 +93,7 @@ test('first run: paste a key, start chatting, and stream an answer about the ope
   const body = sent?.body as { model: string; max_tokens: number; stream: boolean; cache_control: unknown; messages: { role: string; content: { type: string; text: string }[] }[] };
   expect(body.model).toBe('claude-sonnet-5');
   expect(body.stream).toBe(true);
-  expect(body.max_tokens).toBe(16_000);
+  expect(body.max_tokens).toBe(64_000); // Sonnet 5 thinks first, from the same allowance
   expect(body.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
   expect(body.messages[0]?.content[0]?.text).toContain('<flow_metadata_json>');
   expect(body.messages[0]?.content[1]?.text).toBe('What does this flow do?');
@@ -130,13 +130,36 @@ test('a 12-message transcript keeps the composer fully visible at 320px', async 
 
   await expectInViewport(message, viewport);
   await expectInViewport(panel.getByRole('button', { name: 'Send' }), viewport);
-  await expectInViewport(panel.getByRole('button', { name: 'Quick actions' }), viewport);
+  await expectInViewport(panel.getByRole('button', { name: 'Actions' }), viewport);
   // The transcript scrolled to the latest answer, and nothing forces the page wider than the panel.
   await expectInViewport(panel.getByText('Question 6'), viewport);
   expect(await panel.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
   // The formula's code block scrolls inside itself rather than widening the answer.
   const pre = panel.locator('.answer pre').last();
   expect(await pre.evaluate((el) => el.scrollWidth > el.clientWidth && getComputedStyle(el).overflowX === 'auto')).toBe(true);
+
+  // Scrolled up, "Jump to latest" goes back down and hands focus to the message box.
+  const scrollUp = () =>
+    panel.getByRole('log').evaluate((el) => {
+      el.scrollTop = 0;
+      el.dispatchEvent(new Event('scroll'));
+    });
+  await scrollUp();
+  await panel.getByRole('button', { name: 'Jump to latest' }).click();
+  await expect(panel.getByRole('button', { name: 'Jump to latest' })).toHaveCount(0);
+  await expect(message).toBeFocused();
+  // But not over a selection the user may be about to copy: it survives the click.
+  await message.blur();
+  await scrollUp();
+  await panel.getByText('Question 1', { exact: true }).evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+  });
+  await panel.getByRole('button', { name: 'Jump to latest' }).click();
+  expect(await panel.evaluate(() => window.getSelection()!.toString())).toBe('Question 1');
+  await expect(message).not.toBeFocused();
 });
 
 test('Enter during streaming is ignored; Stop keeps the partial answer labelled Stopped, with no Retry', async ({ context, extensionId, serviceWorker }) => {
@@ -145,9 +168,15 @@ test('Enter during streaming is ignored; Stop keeps the partial answer labelled 
   await seedReadyKey(serviceWorker);
   const { panel, message } = await openPanelOnFlow(context, extensionId);
 
+  // Stop takes Send's place exactly: nothing left of it moves when an answer starts.
+  const gauge = panel.getByRole('button', { name: /^About this flow: / });
+  const idle = (await gauge.boundingBox())!;
   await message.fill('First question');
-  await message.press('Enter');
+  // Sent with the button this time: focus goes back to the message box, not the page.
+  await panel.getByRole('button', { name: 'Send' }).click();
   await expect(panel.getByRole('button', { name: 'Stop' })).toBeVisible();
+  await expect(message).toBeFocused();
+  expect((await gauge.boundingBox())!.x).toBeCloseTo(idle.x, 1);
   await panel.getByRole('button', { name: 'Stop' }).hover();
   await expect(panel.getByRole('tooltip')).toHaveText('Stop. Keeps what has arrived so far.', { timeout: 3_000 });
   await expect(panel.getByRole('log')).toContainText('word3');
@@ -162,6 +191,7 @@ test('Enter during streaming is ignored; Stop keeps the partial answer labelled 
 
   await panel.getByRole('button', { name: 'Stop' }).click();
   await expect(panel.getByRole('button', { name: 'Send' })).toBeVisible();
+  await expect(message).toBeFocused();
   await expect(panel.getByText('Stopped')).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Retry' })).toHaveCount(0);
   const partial = await panel.locator('.answer').innerText();
@@ -175,6 +205,42 @@ test('Enter during streaming is ignored; Stop keeps the partial answer labelled 
   const stored = (await readStorage(serviceWorker, CHAT_KEY)) as { turns: { role: string; displayText: string; interrupted?: string }[] };
   expect(stored.turns[1]).toMatchObject({ role: 'assistant', interrupted: 'stopped' });
   expect(stored.turns[1]?.displayText.trim()).toBe(partial.trim());
+});
+
+test('Enter twice on Stop from the keyboard stops the answer and sends nothing more, keeping the draft', async ({ context, extensionId, serviceWorker }) => {
+  await installProviderMock(context, { answers: [{ chunks: words(40, 'word'), delayMs: 100 }] });
+  await mockSalesforce(context);
+  await seedReadyKey(serviceWorker);
+  const { panel, message } = await openPanelOnFlow(context, extensionId);
+
+  await message.fill('First question');
+  await message.press('Enter');
+  const stop = panel.getByRole('button', { name: 'Stop' });
+  await expect(panel.getByRole('log')).toContainText('word2');
+  await message.fill('A follow-up I was still writing');
+  await stop.focus();
+  await panel.keyboard.press('Enter');
+  await panel.keyboard.press('Enter');
+  await expect(panel.getByText('Stopped')).toBeVisible();
+  await panel.waitForTimeout(300);
+  expect(messageCalls(await providerCalls(panel))).toHaveLength(1);
+  expect(await message.inputValue()).toBe('A follow-up I was still writing');
+});
+
+test('the message box re-measures when the panel is narrowed, so a draft is never cut off', async ({ context, extensionId, serviceWorker }) => {
+  await installProviderMock(context, { answers: [{ chunks: ['x'], delayMs: 10 }] });
+  await mockSalesforce(context);
+  await seedReadyKey(serviceWorker);
+  const { panel, message } = await openPanelOnFlow(context, extensionId, { width: 420, height: 760 });
+  await message.fill('Which records does this flow update when the customer type changes, and why does it do that?');
+  const whole = () => message.evaluate((el) => el.scrollHeight <= el.clientHeight + 1);
+  await expect.poll(whole).toBe(true);
+  await panel.setViewportSize({ width: 320, height: 760 });
+  await expect.poll(whole).toBe(true);
+  await panel.setViewportSize({ width: 600, height: 760 });
+  await expect.poll(whole).toBe(true);
+  // And it shrinks back: at 600 the draft fits the box's two lines (a frame after the width changes).
+  await expect.poll(() => message.evaluate((el) => el.clientHeight)).toBeLessThan(60);
 });
 
 test('a Settings round-trip keeps the transcript', async ({ context, extensionId, serviceWorker }) => {
